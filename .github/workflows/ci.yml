@@ -11,6 +11,6 @@ jobs:
       - name: Install 64tass
         run: sudo apt-get update && sudo apt-get install -y 64tass
       - name: Assemble
-        run: 64tass --ascii --case-sensitive -Wall --nostart snakman.asm -o snakman.prg
+        run: 64tass --ascii --case-sensitive -Wall -Werror snakman.asm -o snakman.prg
       - name: Check hash
         run: echo "e3ebc3eb96cb4755c8352870d81da3dc2259b1311fc303433e1d7a541ddf52bf  ./snakman.prg" | sha256sum -c -
