@@ -13,4 +13,4 @@ jobs:
       - name: Assemble
         run: 64tass --ascii --case-sensitive -Wall --nostart snakman.asm -o snakman.prg
       - name: Check hash
-        run: echo "e3ebc3eb96cb4755c8352870d81da3dc2259b1311fc303433e1d7a541ddf5dbf  ./snakman.prg" | sha256sum -c -
+        run: echo "e3ebc3eb96cb4755c8352870d81da3dc2259b1311fc303433e1d7a541ddf52bf  ./snakman.prg" | sha256sum -c -
