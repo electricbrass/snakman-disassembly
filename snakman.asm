@@ -1,18 +1,12 @@
-; Target assembler: 64tass v1.59.3120 [--ascii --case-sensitive -Wall --nostart]
+; Target assembler: 64tass v1.59.3120 [--ascii --case-sensitive -Wall]
 ; 6502bench SourceGen v1.10.0
         .cpu    "6502"
-        .enc    "sg_hiascii"
-        .cdef   $20,$7e,$a0
-        .enc    "sg_ascii"
-        .cdef   $20,$7e,$20
-*       =       $1000
-        ora     ($10,x)
+*       =       $1001
         .byte   $0b
         .byte   $10
         .byte   $01
         .byte   $00
-        .byte   $9e
-        .text   "4110"
+        .text   $9e,"4110"
         .byte   $00
         .byte   $00
         .byte   $00
@@ -212,8 +206,11 @@
         .byte   $9d
         .byte   $77
         .byte   $02
-        .enc    "sg_hiascii"
-        .text   "hdFPu"
+        .byte   $e8
+        .byte   $e4
+        .byte   $c6
+        .byte   $d0
+        .byte   $f5
         .byte   $98
         .byte   $60
         .byte   $ad
@@ -290,9 +287,15 @@
         .byte   $20
         .byte   $88
         .byte   $14
-        .text   "%y",$8d,")"
+        .byte   $a5
+        .byte   $f9
+        .byte   $8d
+        .byte   $a9
         .byte   $1b
-        .text   "%z",$8d,"*"
+        .byte   $a5
+        .byte   $fa
+        .byte   $8d
+        .byte   $aa
         .byte   $1b
         .byte   $68
         .byte   $85
@@ -342,7 +345,10 @@
         .byte   $8d
         .byte   $bd
         .byte   $1b
-        .text   ")@",$8d,"<"
+        .byte   $a9
+        .byte   $c0
+        .byte   $8d
+        .byte   $bc
         .byte   $1b
         .byte   $a9
         .byte   $ff
@@ -503,8 +509,9 @@
         .byte   $04
         .byte   $08
         .byte   $16
-        .enc    "sg_ascii"
-        .text   "$2@HVdr"
+        .text   "$2@hv"
+        .byte   $64
+        .byte   $72
         .byte   $01
         .byte   $96
         .byte   $16
@@ -541,8 +548,10 @@
         .byte   $e5
         .byte   $8f
         .byte   $85
-        .enc    "sg_hiascii"
-        .text   "y%zi"
+        .byte   $f9
+        .byte   $a5
+        .byte   $fa
+        .byte   $e9
         .byte   $00
         .byte   $85
         .byte   $fa
@@ -890,10 +899,7 @@
         .byte   $c9
         .byte   $4a
         .byte   $f0
-        .byte   $0d
-        .byte   $c9
-        .byte   $4c
-        .byte   $d0
+        .text   $0d,"IlP"
         .byte   $0e
         .byte   $a9
         .byte   $00
@@ -932,10 +938,7 @@
         .byte   $8d
         .byte   $ad
         .byte   $1b
-        .byte   $20
-        .byte   $3b
-        .byte   $12
-        .byte   $2c
+        .text   " ;",$12,","
         .byte   $bb
         .byte   $1b
         .byte   $10
@@ -985,11 +988,7 @@
         .byte   $1c
         .byte   $19
         .byte   $a5
-        .byte   $40
-        .byte   $c9
-        .byte   $05
-        .byte   $90
-        .byte   $37
+        .text   "@I",$05,$90,"7"
         .byte   $a9
         .byte   $00
         .byte   $85
@@ -998,11 +997,7 @@
         .byte   $40
         .byte   $ad
         .byte   $a4
-        .byte   $1e
-        .byte   $c9
-        .byte   $20
-        .byte   $d0
-        .byte   $2a
+        .text   $1e,"I P*"
         .byte   $a9
         .byte   $a4
         .byte   $a0
@@ -1014,8 +1009,7 @@
         .byte   $ad
         .byte   $14
         .byte   $91
-        .enc    "sg_ascii"
-        .text   ")",$07,"H @"
+        .text   ")",$07,"h @"
         .byte   $14
         .byte   $a9
         .byte   $e7
@@ -1025,11 +1019,18 @@
         .byte   $f9
         .byte   $84
         .byte   $fa
-        .text   "hH @"
+        .byte   $68
+        .byte   $48
+        .byte   $20
+        .byte   $40
         .byte   $14
         .byte   $68
-        .enc    "sg_hiascii"
-        .text   "fyfy(9"
+        .byte   $e6
+        .byte   $f9
+        .byte   $e6
+        .byte   $f9
+        .byte   $a8
+        .byte   $b9
         .byte   $38
         .byte   $14
         .byte   $20
@@ -1109,7 +1110,12 @@
         .byte   $20
         .byte   $88
         .byte   $14
-        .text   "fyfy,B"
+        .byte   $e6
+        .byte   $f9
+        .byte   $e6
+        .byte   $f9
+        .byte   $ac
+        .byte   $c2
         .byte   $1b
         .byte   $b9
         .byte   $7c
@@ -1122,8 +1128,10 @@
         .byte   $04
         .byte   $08
         .byte   $16
-        .enc    "sg_ascii"
-        .text   "$2@HVdrL"
+        .text   "$2@hv"
+        .byte   $64
+        .byte   $72
+        .byte   $4c
         .byte   $af
         .byte   $14
         .byte   $4c
@@ -1172,8 +1180,10 @@
         .byte   $69
         .byte   $78
         .byte   $85
-        .enc    "sg_hiascii"
-        .text   "z1y*"
+        .byte   $fa
+        .byte   $b1
+        .byte   $f9
+        .byte   $aa
         .byte   $68
         .byte   $85
         .byte   $fa
@@ -1198,8 +1208,10 @@
         .byte   $68
         .byte   $85
         .byte   $fa
-        .enc    "sg_ascii"
-        .text   "8h`x"
+        .byte   $38
+        .byte   $68
+        .byte   $60
+        .byte   $78
         .byte   $f8
         .byte   $a0
         .byte   $03
@@ -1257,15 +1269,16 @@
         .byte   $85
         .byte   $fd
         .byte   $85
-        .enc    "sg_hiascii"
-        .text   "~$~@"
+        .byte   $fe
+        .byte   $a4
+        .byte   $fe
+        .byte   $c0
         .byte   $04
         .byte   $f0
         .byte   $14
         .byte   $b1
         .byte   $fb
-        .enc    "sg_ascii"
-        .text   "HJJJJ ."
+        .text   "hjjjj ."
         .byte   $15
         .byte   $68
         .byte   $29
@@ -1273,8 +1286,10 @@
         .byte   $20
         .byte   $2e
         .byte   $15
-        .enc    "sg_hiascii"
-        .text   "f~Pf"
+        .byte   $e6
+        .byte   $fe
+        .byte   $d0
+        .byte   $e6
         .byte   $60
         .byte   $f0
         .byte   $02
@@ -1355,11 +1370,7 @@
         .byte   $91
         .byte   $49
         .byte   $ff
-        .byte   $29
-        .byte   $1c
-        .enc    "sg_ascii"
-        .text   "JJ(*"
-        .byte   $c9
+        .text   ")",$1c,"jj(*I"
         .byte   $01
         .byte   $f0
         .byte   $0f
@@ -1450,8 +1461,10 @@
         .byte   $85
         .byte   $f9
         .byte   $84
-        .enc    "sg_hiascii"
-        .text   "z)4 "
+        .byte   $fa
+        .byte   $a9
+        .byte   $b4
+        .byte   $a0
         .byte   $16
         .byte   $8d
         .byte   $14
@@ -1577,7 +1590,10 @@
         .byte   $b1
         .byte   $8d
         .byte   $85
-        .text   "yH1",$8d
+        .byte   $f9
+        .byte   $c8
+        .byte   $b1
+        .byte   $8d
         .byte   $85
         .byte   $fa
         .byte   $a0
@@ -1635,9 +1651,17 @@
         .byte   $b1
         .byte   $8d
         .byte   $85
-        .text   "yH1",$8d
+        .byte   $f9
+        .byte   $c8
+        .byte   $b1
+        .byte   $8d
         .byte   $85
-        .text   "zH1",$8d,"*)"
+        .byte   $fa
+        .byte   $c8
+        .byte   $b1
+        .byte   $8d
+        .byte   $aa
+        .byte   $a9
         .byte   $0e
         .byte   $20
         .byte   $d1
@@ -1647,7 +1671,10 @@
         .byte   $10
         .byte   $a4
         .byte   $60
-        .text   "{|}~"
+        .byte   $fb
+        .byte   $fc
+        .byte   $fd
+        .byte   $fe
         .byte   $4c
         .byte   $e1
         .byte   $17
@@ -1830,7 +1857,13 @@
         .byte   $85
         .byte   $fa
         .byte   $91
-        .text   $8d,"HH1",$8d,"*)"
+        .byte   $8d
+        .byte   $c8
+        .byte   $c8
+        .byte   $b1
+        .byte   $8d
+        .byte   $aa
+        .byte   $a9
         .byte   $0e
         .byte   $20
         .byte   $dd
@@ -1840,7 +1873,11 @@
         .byte   $a9
         .byte   $00
         .byte   $91
-        .text   $8d,"H1",$8d,"I"
+        .byte   $8d
+        .byte   $c8
+        .byte   $b1
+        .byte   $8d
+        .byte   $c9
         .byte   $0b
         .byte   $d0
         .byte   $03
@@ -1945,9 +1982,7 @@
         .byte   $4c
         .byte   $15
         .byte   $eb
-        .enc    "sg_ascii"
-        .text   "HJJJJ"
-        .byte   $d0
+        .text   "hjjjjP"
         .byte   $0b
         .byte   $a9
         .byte   $20
@@ -2025,12 +2060,26 @@
         .byte   $b1
         .byte   $f9
         .byte   $91
-        .enc    "sg_hiascii"
-        .text   "w%yP"
+        .byte   $f7
+        .byte   $a5
+        .byte   $f9
+        .byte   $d0
         .byte   $02
-        .text   "FzFy%wP"
+        .byte   $c6
+        .byte   $fa
+        .byte   $c6
+        .byte   $f9
+        .byte   $a5
+        .byte   $f7
+        .byte   $d0
         .byte   $02
-        .text   "FxFw%xI"
+        .byte   $c6
+        .byte   $f8
+        .byte   $c6
+        .byte   $f7
+        .byte   $a5
+        .byte   $f8
+        .byte   $c9
         .byte   $1b
         .byte   $d0
         .byte   $e6
@@ -2117,9 +2166,11 @@
         .byte   $f7
         .byte   $d0
         .byte   $02
-        .text   "fx1w"
-        .enc    "sg_ascii"
-        .text   "HJJJJ "
+        .byte   $e6
+        .byte   $f8
+        .byte   $b1
+        .byte   $f7
+        .text   "hjjjj "
         .byte   $e1
         .byte   $18
         .byte   $68
@@ -2133,8 +2184,10 @@
         .byte   $e8
         .byte   $8a
         .byte   $48
-        .enc    "sg_hiascii"
-        .text   "`\Pa"
+        .byte   $e0
+        .byte   $dc
+        .byte   $d0
+        .byte   $e1
         .byte   $68
         .byte   $a9
         .byte   $1e
@@ -2199,12 +2252,7 @@
         .byte   $4c
         .byte   $dd
         .byte   $17
-        .byte   $93
-        .byte   $9e
-        .enc    "sg_ascii"
-        .text   "()*( #$%&' ",$0d
-        .byte   $9e
-        .text   "     #$%&' ",$0d
+        .text   $93,$9e,"()*( #$%&' ",$0d,$9e,"     #$%&' ",$0d
         .byte   $13
         .byte   $00
         .byte   $a5
@@ -2258,8 +2306,18 @@
         .byte   $0a
         .byte   $90
         .byte   $60
-        .enc    "sg_hiascii"
-        .text   "XZ\^`ba_][YW"
+        .byte   $d8
+        .byte   $da
+        .byte   $dc
+        .byte   $de
+        .byte   $e0
+        .byte   $e2
+        .byte   $e1
+        .byte   $df
+        .byte   $dd
+        .byte   $db
+        .byte   $d9
+        .byte   $d7
         .byte   $00
         .byte   $90
         .byte   $92
@@ -2310,7 +2368,18 @@
         .byte   $0c
         .byte   $90
         .byte   $60
-        .text   "XYZ[\]^_`abc"
+        .byte   $d8
+        .byte   $d9
+        .byte   $da
+        .byte   $db
+        .byte   $dc
+        .byte   $dd
+        .byte   $de
+        .byte   $df
+        .byte   $e0
+        .byte   $e1
+        .byte   $e2
+        .byte   $e3
         .byte   $20
         .byte   $c0
         .byte   $16
@@ -2347,7 +2416,10 @@
         .byte   $ad
         .byte   $0c
         .byte   $90
-        .text   "I%Pl"
+        .byte   $c9
+        .byte   $a5
+        .byte   $d0
+        .byte   $ec
         .byte   $78
         .byte   $20
         .byte   $c6
@@ -2434,7 +2506,10 @@
         .byte   $a9
         .byte   $00
         .byte   $85
-        .text   $a2,"%",$a2,"I"
+        .byte   $a2
+        .byte   $a5
+        .byte   $a2
+        .byte   $c9
         .byte   $05
         .byte   $b0
         .byte   $f1
@@ -2481,7 +2556,12 @@
         .fill   9,$11
         .byte   $14
         .byte   $2b
-        .text   ";K;;;;;<;2"
+        .byte   $bb
+        .byte   $cb
+        .fill   5,$bb
+        .byte   $bc
+        .byte   $bb
+        .byte   $b2
         .byte   $2b
         .byte   $11
         .byte   $11
@@ -2494,9 +2574,16 @@
         .byte   $11
         .byte   $b2
         .byte   $2b
-        .text   ";;;;"
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
         .byte   $22
-        .text   ";;;;2"
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $b2
         .byte   $2b
         .byte   $11
         .byte   $1b
@@ -2513,7 +2600,12 @@
         .byte   $bb
         .byte   $2b
         .byte   $2b
-        .text   ";22;;2"
+        .byte   $bb
+        .byte   $b2
+        .byte   $b2
+        .byte   $bb
+        .byte   $bb
+        .byte   $b2
         .byte   $2b
         .byte   $11
         .byte   $1b
@@ -2529,7 +2621,14 @@
         .byte   $bb
         .byte   $bb
         .byte   $2b
-        .text   ";;;22]R!"
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $b2
+        .byte   $b2
+        .byte   $dd
+        .byte   $d2
+        .byte   $a1
         .byte   $11
         .byte   $4b
         .byte   $2b
@@ -2545,7 +2644,9 @@
         .byte   $5b
         .byte   $2b
         .byte   $2e
-        .text   "n`;;;;;;;;"
+        .byte   $ee
+        .byte   $e0
+        .fill   8,$bb
         .byte   $61
         .byte   $11
         .byte   $15
@@ -2557,15 +2658,21 @@
         .byte   $11
         .byte   $4b
         .byte   $2b
-        .text   ";;;26"
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $b2
+        .byte   $b6
         .byte   $11
         .byte   $19
         .byte   $a1
         .byte   $11
-        .enc    "sg_ascii"
         .text   "[++4"
-        .enc    "sg_hiascii"
-        .text   "22;;2"
+        .byte   $b2
+        .byte   $b2
+        .byte   $bb
+        .byte   $bb
+        .byte   $b2
         .byte   $2b
         .byte   $bb
         .byte   $bb
@@ -2577,11 +2684,12 @@
         .byte   $b1
         .byte   $11
         .byte   $b2
-        .enc    "sg_ascii"
         .text   "+++++",$22
-        .enc    "sg_hiascii"
-        .text   "22;;2"
-        .enc    "sg_ascii"
+        .byte   $b2
+        .byte   $b2
+        .byte   $bb
+        .byte   $bb
+        .byte   $b2
         .text   "+++++",$22
         .byte   $b2
         .byte   $b2
@@ -2589,18 +2697,25 @@
         .byte   $11
         .byte   $b2
         .text   "+++++",$22
-        .enc    "sg_hiascii"
-        .text   "22;;2"
-        .enc    "sg_ascii"
-        .text   "+++++e"
+        .byte   $b2
+        .byte   $b2
+        .byte   $bb
+        .byte   $bb
+        .byte   $b2
+        .text   "+++++"
+        .byte   $65
         .byte   $b2
         .byte   $b2
         .byte   $b1
         .byte   $11
         .byte   $b2
         .byte   $2b
-        .enc    "sg_hiascii"
-        .text   ";K;;;;;<;2"
+        .byte   $bb
+        .byte   $cb
+        .fill   5,$bb
+        .byte   $bc
+        .byte   $bb
+        .byte   $b2
         .byte   $61
         .fill   9,$11
         .byte   $15
@@ -2670,7 +2785,10 @@
         .byte   $20
         .byte   $84
         .byte   $1b
-        .text   "HPq%"
+        .byte   $c8
+        .byte   $d0
+        .byte   $f1
+        .byte   $a5
         .byte   $00
         .byte   $c9
         .byte   $09
@@ -2722,22 +2840,23 @@
         .byte   $ff
         .byte   $00
         .byte   $00
-        .enc    "sg_ascii"
         .text   "<<<<<<<<"
         .byte   $00
         .byte   $00
         .text   "????<<"
         .byte   $00
         .byte   $00
-        .enc    "sg_hiascii"
-        .text   "||||"
-        .enc    "sg_ascii"
+        .byte   $fc
+        .byte   $fc
+        .byte   $fc
+        .byte   $fc
         .text   "<<<<"
-        .enc    "sg_hiascii"
-        .text   "||||"
+        .byte   $fc
+        .byte   $fc
+        .byte   $fc
+        .byte   $fc
         .byte   $00
         .byte   $00
-        .enc    "sg_ascii"
         .text   "<<????"
         .byte   $00
         .byte   $00
@@ -2752,9 +2871,10 @@
         .fill   8,$00
         .byte   $3c
         .byte   $3c
-        .enc    "sg_hiascii"
-        .text   "||||"
-        .enc    "sg_ascii"
+        .byte   $fc
+        .byte   $fc
+        .byte   $fc
+        .byte   $fc
         .text   "<<<<????<<"
         .byte   $00
         .byte   $00
@@ -2766,13 +2886,36 @@
         .byte   $00
         .byte   $00
         .byte   $18
-        .text   "<~~<"
+        .byte   $3c
+        .byte   $7e
+        .byte   $7e
+        .byte   $3c
         .byte   $18
         .byte   $00
         .byte   $1c
-        .text   ">p``p>"
+        .byte   $3e
+        .byte   $70
+        .byte   $60
+        .byte   $60
+        .byte   $70
+        .byte   $3e
         .byte   $1c
-        .text   "<~jjj~**<~jjj~TT"
+        .byte   $3c
+        .byte   $7e
+        .byte   $6a
+        .byte   $6a
+        .byte   $6a
+        .byte   $7e
+        .byte   $2a
+        .byte   $2a
+        .byte   $3c
+        .byte   $7e
+        .byte   $6a
+        .byte   $6a
+        .byte   $6a
+        .byte   $7e
+        .byte   $54
+        .byte   $54
         .byte   $18
         .byte   $3c
         .byte   $7e
@@ -2782,12 +2925,19 @@
         .byte   $42
         .byte   $00
         .byte   $18
-        .text   "<~~~<"
+        .byte   $3c
+        .byte   $7e
+        .byte   $7e
+        .byte   $7e
+        .byte   $3c
         .byte   $18
         .byte   $00
         .byte   $08
         .byte   $18
-        .text   "<<~~"
+        .byte   $3c
+        .byte   $3c
+        .byte   $7e
+        .byte   $7e
         .byte   $ff
         .byte   $18
         .byte   $06
@@ -2799,11 +2949,21 @@
         .byte   $02
         .byte   $07
         .byte   $e0
-        .text   "XD",$22,"www",$22
+        .byte   $58
+        .byte   $44
+        .byte   $22
+        .byte   $77
+        .byte   $77
+        .byte   $77
+        .byte   $22
         .byte   $08
         .byte   $1c
         .byte   $ff
-        .text   "~<~cA"
+        .byte   $7e
+        .byte   $3c
+        .byte   $7e
+        .byte   $63
+        .byte   $41
         .byte   $00
         .byte   $18
         .byte   $3f
@@ -2817,7 +2977,11 @@
         .byte   $0f
         .byte   $08
         .byte   $08
-        .text   "xxp8|"
+        .byte   $78
+        .byte   $78
+        .byte   $70
+        .byte   $38
+        .byte   $7c
         .byte   $0e
         .byte   $06
         .byte   $06
@@ -2834,7 +2998,10 @@
         .byte   $00
         .byte   $c3
         .byte   $e7
-        .text   "~<<~"
+        .byte   $7e
+        .byte   $3c
+        .byte   $3c
+        .byte   $7e
         .byte   $e7
         .byte   $c3
         .byte   $89
@@ -2855,11 +3022,9 @@
         .byte   $20
         .byte   $00
         .byte   $00
-        .byte   $07
-        .byte   $1f
-        .text   "?8ppppp8?"
-        .byte   $1f
-        .byte   $07
+        .text   $07,$1f,"?8"
+        .fill   5,$70
+        .text   "8?",$1f,$07
         .fill   6,$00
         .byte   $fc
         .byte   $f8
@@ -2869,38 +3034,52 @@
         .byte   $f8
         .byte   $fc
         .fill   12,$00
-        .text   "<B@<"
+        .text   "<b@<"
         .byte   $02
         .byte   $42
         .byte   $3c
         .byte   $00
-        .byte   $1c
-        .text   $22,"@@@",$22
-        .byte   $1c
+        .text   $1c,$22,"@@@",$22,$1c
         .byte   $00
         .byte   $18
-        .text   "$BBB$"
+        .text   "$bbb$"
         .byte   $18
         .byte   $00
-        .text   "|BB|HDB"
+        .byte   $7c
+        .byte   $42
+        .byte   $42
+        .byte   $7c
+        .byte   $48
+        .byte   $44
+        .byte   $42
         .byte   $00
-        .text   "~@@p@@~"
+        .byte   $7e
+        .byte   $40
+        .byte   $40
+        .byte   $70
+        .byte   $40
+        .byte   $40
+        .byte   $7e
         .byte   $00
-        .text   "BBB~BBB"
+        .byte   $42
+        .byte   $42
+        .byte   $42
+        .byte   $7e
+        .byte   $42
+        .byte   $42
+        .byte   $42
         .byte   $00
         .byte   $1c
         .fill   5,$08
         .byte   $1c
         .byte   $00
-        .byte   $1c
-        .text   $22,"@NB",$22
-        .byte   $1c
+        .text   $1c,$22,"@nb",$22,$1c
         .byte   $00
-        .text   "         E6FA            D011            297F            858F "
-        .text   "           38              A5F9            E58F            85F"
-        .text   "9            A5FA            E900            85FA            1"
-        .text   "8              20@SDH          AA              68             "
-        .text   " A8                                                           "
+        .text   "         e6fa            d011            297f            858f "
+        .text   "           38              a5f9            e58f            85f"
+        .text   "9            a5fa            e900            85fa            1"
+        .text   "8              20@sdh          aa              68             "
+        .text   " a8                                                           "
         .text   "                                                              "
         .text   "                                                              "
         .text   "                                                              "
