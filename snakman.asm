@@ -1899,311 +1899,758 @@ inc_counter0
 return
         rts
 
+        .logical $1b97
 L1B97
-        .byte   $12
-        .byte   $05
-        .byte   $01
-        .byte   $04
+        .byte   %00010010           ;unknown tile? or variable space?
+        .byte   %00000101
+        .byte   %00000001
+        .byte   %00000100
 L1B9B
-        .byte   $19
+        .byte   %00011001
 L1B9C
-        .byte   $2e
-        .byte   $15
+        .byte   %00101110
+        .byte   %00010101
 L1B9E
-        .byte   $0e
-        .byte   $28
-        .byte   $14
-        .byte   $28
+        .byte   %00001110
+        .here
+        .logical $1b9f
+        .byte   %00101000           ;ghost home door tile
+        .byte   %00010100
+        .byte   %00101000
 L1BA2
-        .byte   $14
+        .byte   %00010100
 L1BA3
-        .byte   $28
-        .byte   $14
+        .byte   %00101000
+        .byte   %00010100
 L1BA5
-        .byte   $28
-        .byte   $14
-        .byte   $00
-        .byte   $00
+        .byte   %00101000
+        .byte   %00010100
+        .here
+        .logical $1ba7
+        .byte   %00000000           ;horizontal wall tile
+        .byte   %00000000
 L1BA9
-        .byte   $ff
+        .byte   %11111111
 L1BAA
-        .byte   $ff
+        .byte   %11111111
 L1BAB
-        .byte   $ff
+        .byte   %11111111
 L1BAC
-        .byte   $ff
+        .byte   %11111111
 L1BAD
-        .byte   $00
+        .byte   %00000000
 L1BAE
-        .byte   $00
+        .byte   %00000000
+        .here
+        .logical $1baf
 L1BAF
-        .byte   $3c
+        .byte   %00111100           ;vertical wall tile
 L1BB0
-        .byte   $3c
+        .byte   %00111100
 L1BB1
-        .byte   $3c
-        .byte   $3c
+        .byte   %00111100
+        .byte   %00111100
 L1BB3
-        .byte   $3c
+        .byte   %00111100
 L1BB4
-        .byte   $3c
+        .byte   %00111100
 L1BB5
-        .byte   $3c
+        .byte   %00111100
 L1BB6
-        .byte   $3c
-        .byte   $00
+        .byte   %00111100
+        .here
+        .logical $1bb7
+        .byte   %00000000           ;top left corner tile
 L1BB8
-        .byte   $00
-        .byte   $3f
+        .byte   %00000000
+        .byte   %00111111
 L1BBA
-        .byte   $3f
+        .byte   %00111111
 L1BBB
-        .byte   $3f
+        .byte   %00111111
 L1BBC
-        .byte   $3f
+        .byte   %00111111
 L1BBD
-        .byte   $3c
+        .byte   %00111100
 L1BBE
-        .byte   $3c
+        .byte   %00111100
+        .here
+        .logical $1bbf
 L1BBF
-        .byte   $00
-        .byte   $00
+        .byte   %00000000           ;top right corner tile
+        .byte   %00000000
 L1BC1
-        .byte   $fc
+        .byte   %11111100
 L1BC2
-        .byte   $fc
-        .byte   $fc
-        .byte   $fc
-        .text   "<<<<"
-        .byte   $fc
-        .byte   $fc
-        .byte   $fc
-        .byte   $fc
-        .byte   $00
-        .byte   $00
-        .text   "<<????"
-        .byte   $00
-        .byte   $00
-        .byte   $00
-        .byte   $00
-        .byte   $ff
-        .byte   $ff
-        .byte   $ff
-        .byte   $ff
-        .byte   $3c
-        .byte   $3c
-        .fill   8,$00
-        .byte   $3c
-        .byte   $3c
-        .byte   $fc
-        .byte   $fc
-        .byte   $fc
-        .byte   $fc
-        .text   "<<<<????<<"
-        .byte   $00
-        .byte   $00
-        .byte   $18
-        .byte   $3c
-        .byte   $3c
-        .byte   $18
-        .byte   $00
-        .byte   $00
-        .byte   $00
-        .byte   $18
-        .byte   $3c
-        .byte   $7e
-        .byte   $7e
-        .byte   $3c
-        .byte   $18
-        .byte   $00
-        .byte   $1c
-        .byte   $3e
-        .byte   $70
-        .byte   $60
-        .byte   $60
-        .byte   $70
-        .byte   $3e
-        .byte   $1c
-        .byte   $3c
-        .byte   $7e
-        .byte   $6a
-        .byte   $6a
-        .byte   $6a
-        .byte   $7e
-        .byte   $2a
-        .byte   $2a
-        .byte   $3c
-        .byte   $7e
-        .byte   $6a
-        .byte   $6a
-        .byte   $6a
-        .byte   $7e
-        .byte   $54
-        .byte   $54
-        .byte   $18
-        .byte   $3c
-        .byte   $7e
-        .byte   $e7
-        .byte   $c3
-        .byte   $c3
-        .byte   $42
-        .byte   $00
-        .byte   $18
-        .byte   $3c
-        .byte   $7e
-        .byte   $7e
-        .byte   $7e
-        .byte   $3c
-        .byte   $18
-        .byte   $00
-        .byte   $08
-        .byte   $18
-        .byte   $3c
-        .byte   $3c
-        .byte   $7e
-        .byte   $7e
-        .byte   $ff
-        .byte   $18
-        .byte   $06
-        .byte   $8e
-        .byte   $7e
-        .byte   $3e
-        .byte   $1e
-        .byte   $02
-        .byte   $02
-        .byte   $07
-        .byte   $e0
-        .byte   $58
-        .byte   $44
-        .byte   $22
-        .byte   $77
-        .byte   $77
-        .byte   $77
-        .byte   $22
-        .byte   $08
-        .byte   $1c
-        .byte   $ff
-        .byte   $7e
-        .byte   $3c
-        .byte   $7e
-        .byte   $63
-        .byte   $41
-        .byte   $00
-        .byte   $18
-        .byte   $3f
-        .byte   $7d
-        .byte   $7f
-        .byte   $7e
-        .byte   $7e
-        .byte   $7e
-        .byte   $0f
-        .byte   $08
-        .byte   $0f
-        .byte   $08
-        .byte   $08
-        .byte   $78
-        .byte   $78
-        .byte   $70
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %00111100
+        .byte   %00111100
+        .here
+        .logical $1bc7
+        .byte   %00111100           ;bottom right corner tile
+        .byte   %00111100
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %00000000
+        .byte   %00000000
+        .here
+        .logical $1bcf
+        .byte   %00111100           ;bottom left corner tile
+        .byte   %00111100
+        .byte   %00111111
+        .byte   %00111111
+        .byte   %00111111
+        .byte   %00111111
+        .byte   %00000000
+        .byte   %00000000
+        .here
+        .logical $1bd7
+        .byte   %00000000           ;downward T tile
+        .byte   %00000000
+        .byte   %11111111
+        .byte   %11111111
+        .byte   %11111111
+        .byte   %11111111
+        .byte   %00111100
+        .byte   %00111100
+        .here
+        .logical $1bdf
+        .byte   %00000000           ;empty tile
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .here
+        .logical $1be7
+        .byte   %00111100           ;leftward T tile
+        .byte   %00111100
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %11111100
+        .byte   %00111100
+        .byte   %00111100
+        .here
+        .logical $1bef
+        .byte   %00111100           ;rightward T tile
+        .byte   %00111100
+        .byte   %00111111
+        .byte   %00111111
+        .byte   %00111111
+        .byte   %00111111
+        .byte   %00111100
+        .byte   %00111100
+        .here
+        .logical $1bf7
+        .byte   %00000000           ;small pellet sprite
+        .byte   %00000000
+        .byte   %00011000
+        .byte   %00111100
+        .byte   %00111100
+        .byte   %00011000
+        .byte   %00000000
+        .byte   %00000000
+        .here
+        .logical $1bff
+        .byte   %00000000           ;power pellet sprite
+        .byte   %00011000
+        .byte   %00111100
+        .byte   %01111110
+        .byte   %01111110
+        .byte   %00111100
+        .byte   %00011000
+        .byte   %00000000
+        .here
+        .logical $1c07
+        .byte   %00011100           ;snakman sprite right-facing
+        .byte   %00111110
+        .byte   %01110000
+        .byte   %01100000
+        .byte   %01100000
+        .byte   %01110000
+        .byte   %00111110
+        .byte   %00011100
+        .here
+        .logical $1c0f
+        .byte   %00111100           ;ghost sprite 1
+        .byte   %01111110
+        .byte   %01101010
+        .byte   %01101010
+        .byte   %01101010
+        .byte   %01111110
+        .byte   %00101010
+        .byte   %00101010
+        .here
+        .logical $1c17
+        .byte   %00111100           ;ghost sprite 2
+        .byte   %01111110
+        .byte   %01101010
+        .byte   %01101010
+        .byte   %01101010
+        .byte   %01111110
+        .byte   %01010100
+        .byte   %01010100
+        .here
+        .logical $1c1f
+        .byte   %00011000           ;snakman sprite downward-facing
+        .byte   %00111100
+        .byte   %01111110
+        .byte   %11100111
+        .byte   %11000011
+        .byte   %11000011
+        .byte   %01000010
+        .byte   %00000000
+        .here
+        .logical $1c27
+        .byte   %00011000           ;snakman sprite mouth closed
+        .byte   %00111100
+        .byte   %01111110
+        .byte   %01111110
+        .byte   %01111110
+        .byte   %00111100
+        .byte   %00011000
+        .byte   %00000000
+        .here
+        .logical $1c2f
+        .byte   %00001000           ;weird tree-like sprite
+        .byte   %00011000
+        .byte   %00111100
+        .byte   %00111100
+        .byte   %01111110
+        .byte   %01111110
+        .byte   %11111111
+        .byte   %00011000
+        .here
+        .logical $1c37
+        .byte   %00000110           ;unknown sprite
+        .byte   %10001110
+        .byte   %01111110
+        .byte   %00111110
+        .byte   %00011110
+        .byte   %00000010
+        .byte   %00000010
+        .byte   %00000111
+        .here
+        .logical $1c3f
+        .byte   %11100000
+        .byte   %01011000
+        .byte   %01000100
+        .byte   %00100010
+        .byte   %01110111
+        .byte   %01110111
+        .byte   %01110111
+        .byte   %00100010
+        .here
+        .logical $1c47
+        .byte   %00001000
+        .byte   %00011100
+        .byte   %11111111
+        .byte   %01111110
+        .byte   %00111100
+        .byte   %01111110
+        .byte   %01100011
+        .byte   %01000001
+        .here
+        .logical $1c4f
+        .byte   %00000000
+        .byte   %00011000
+        .byte   %00111111
+        .byte   %01111101
+        .byte   %01111111
+        .byte   %01111110
+        .byte   %01111110
+        .byte   %01111110
+        .here
+        .logical $1c57
+        .byte   %00001111
+        .byte   %00001000
+        .byte   %00001111
+        .byte   %00001000
+        .byte   %00001000
+        .byte   %01111000
+        .byte   %01111000
+        .byte   %01110000
+        .here
+        .logical $1c5f
+        .byte   %00111000           ;snakman sprite left-facing
+        .byte   %01111100
+        .byte   %00001110
+        .byte   %00000110
+        .byte   %00000110
+        .byte   %00001110
+        .byte   %01111100
+        .byte   %00111000
+        .here
+        .logical $1c67
+        .byte   %00000000           ;snakman sprite upward-facing
+        .byte   %01000010
+        .byte   %11000011
+        .byte   %11000011
+        .byte   %11100111
+        .byte   %01111110
+        .byte   %00111100
+        .byte   %00000000
+        .here
+        .logical $1c6f
+        .byte   %11000011           ;snakman death frame x
+        .byte   %11100111
+        .byte   %01111110
+        .byte   %00111100
+        .byte   %00111100
+        .byte   %01111110
+        .byte   %11100111
+        .byte   %11000011
+        .here
+        .logical $1c77
+        .byte   %10001001
+        .byte   %01001010
+        .byte   %00101100
+        .byte   %11111111
+        .byte   %00011000
+        .byte   %00110100
+        .byte   %01010010
+        .byte   %10010001
+        .here
+        .logical $1c7f
+        .byte   %00000000
+        .byte   %01000000
+        .byte   %00000000
+        .byte   %00000010
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000010
+        .byte   %00100000
+        .here
+        .logical $1c87
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000111
+        .byte   %00011111
+        .byte   %00111111
+        .byte   %00111000
+        .byte   %01110000
+        .byte   %01110000
+        .here
+        .logical $1c8f
+        .byte   %01110000
+        .byte   %01110000
+        .byte   %01110000
+        .byte   %00111000
+        .byte   %00111111
+        .byte   %00011111
+        .byte   %00000111
+        .byte   %00000000
+        .here
+        .logical $1c97
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %11111100
+        .byte   %11111000
+        .byte   %11110000
+        .here
+        .logical $1c9f
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .here
+        .logical $1ca7
+        .byte   %00000000
+        .byte   %11110000
+        .byte   %11111000
+        .byte   %11111100
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .here
+        .logical $1caf
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .byte   %00000000
+        .here
+        .logical $1cb7
+        .byte   %00111100           ;character S
+        .byte   %01000010
+        .byte   %01000000
+        .byte   %00111100
+        .byte   %00000010
+        .byte   %01000010
+        .byte   %00111100
+        .byte   %00000000
+        .here
+        .logical $1cbf
+        .byte   %00011100           ;character C
+        .byte   %00100010
+        .byte   %01000000
+        .byte   %01000000
+        .byte   %01000000
+        .byte   %00100010
+        .byte   %00011100
+        .byte   %00000000
+        .here
+        .logical $1cc7
+        .byte   %00011000           ;character O
+        .byte   %00100100
+        .byte   %01000010
+        .byte   %01000010
+        .byte   %01000010
+        .byte   %00100100
+        .byte   %00011000
+        .byte   %00000000
+        .here
+        .logical $1ccf
+        .byte   %01111100           ;character R
+        .byte   %01000010
+        .byte   %01000010
+        .byte   %01111100
+        .byte   %01001000
+        .byte   %01000100
+        .byte   %01000010
+        .byte   %00000000
+        .here
+        .logical $1cd7
+        .byte   %01111110           ;character E
+        .byte   %01000000
+        .byte   %01000000
+        .byte   %01110000
+        .byte   %01000000
+        .byte   %01000000
+        .byte   %01111110
+        .byte   %00000000
+        .here
+        .logical $1cdf
+        .byte   %01000010           ;character H
+        .byte   %01000010
+        .byte   %01000010
+        .byte   %01111110
+        .byte   %01000010
+        .byte   %01000010
+        .byte   %01000010
+        .byte   %00000000
+        .here
+        .logical $1ce7
+        .byte   %00011100           ;character I
+        .byte   %00001000
+        .byte   %00001000
+        .byte   %00001000
+        .byte   %00001000
+        .byte   %00001000
+        .byte   %00011100
+        .byte   %00000000
+        .here
+        .logical $1cef
+        .byte   %00011100           ;character G
+        .byte   %00100010
+        .byte   %01000000
+        .byte   %01001110
+        .byte   %01000010
+        .byte   %00100010
+        .byte   %00011100
+        .byte   %00000000
+        .here
+        .logical $1cf7
+        .byte   %00100000           ;i wonder if the stuff below here is the maze layout
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1cff
+        .byte   %00100000
+        .byte   %01000101
+        .byte   %00110110
+        .byte   %01000110
+        .byte   %01000001
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1d07
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1d0f
+        .byte   %00100000
+        .byte   %01000100
+        .byte   %00110000
+        .byte   %00110001
+        .byte   %00110001
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1d17
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1d1f
+        .byte   %00100000
+        .byte   %00110010
+        .byte   %00111001
+        .byte   %00110111
+        .byte   %01000110
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1d27
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1d30
+        .byte   %00111000
+        .byte   %00110101
+        .byte   %00111000
+        .byte   %01000110
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .logical $1d38
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .byte   %00100000
+        .here
+        .byte   $33
         .byte   $38
-        .byte   $7c
-        .byte   $0e
-        .byte   $06
-        .byte   $06
-        .byte   $0e
-        .byte   $7c
-        .byte   $38
-        .byte   $00
-        .byte   $42
-        .byte   $c3
-        .byte   $c3
-        .byte   $e7
-        .byte   $7e
-        .byte   $3c
-        .byte   $00
-        .byte   $c3
-        .byte   $e7
-        .byte   $7e
-        .byte   $3c
-        .byte   $3c
-        .byte   $7e
-        .byte   $e7
-        .byte   $c3
-        .byte   $89
-        .byte   $4a
-        .byte   $2c
-        .byte   $ff
-        .byte   $18
-        .byte   $34
-        .byte   $52
-        .byte   $91
-        .byte   $00
-        .byte   $40
-        .byte   $00
-        .byte   $02
-        .byte   $00
-        .byte   $00
-        .byte   $02
         .byte   $20
-        .byte   $00
-        .byte   $00
-        .text   $07,$1f,"?8"
-        .fill   5,$70
-        .text   "8?",$1f,$07
-        .fill   6,$00
-        .byte   $fc
-        .byte   $f8
-        .byte   $f0
-        .fill   9,$00
-        .byte   $f0
-        .byte   $f8
-        .byte   $fc
-        .fill   12,$00
-        .text   "<b@<"
-        .byte   $02
-        .byte   $42
-        .byte   $3c
-        .byte   $00
-        .text   $1c,$22,"@@@",$22,$1c
-        .byte   $00
-        .byte   $18
-        .text   "$bbb$"
-        .byte   $18
-        .byte   $00
-        .byte   $7c
-        .byte   $42
-        .byte   $42
-        .byte   $7c
-        .byte   $48
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $41
+        .byte   $35
+        .byte   $46
+        .byte   $39
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $45
+        .byte   $35
+        .byte   $38
+        .byte   $46
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $38
+        .byte   $35
+        .byte   $46
+        .byte   $39
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $41
+        .byte   $35
+        .byte   $46
+        .byte   $41
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $45
+        .byte   $39
+        .byte   $30
+        .byte   $30
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $38
+        .byte   $35
+        .byte   $46
+        .byte   $41
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $31
+        .byte   $38
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $32
+        .byte   $30
+        .byte   $40
+        .byte   $53
         .byte   $44
-        .byte   $42
-        .byte   $00
-        .byte   $7e
-        .byte   $40
-        .byte   $40
-        .byte   $70
-        .byte   $40
-        .byte   $40
-        .byte   $7e
-        .byte   $00
-        .byte   $42
-        .byte   $42
-        .byte   $42
-        .byte   $7e
-        .byte   $42
-        .byte   $42
-        .byte   $42
-        .byte   $00
-        .byte   $1c
-        .fill   5,$08
-        .byte   $1c
-        .byte   $00
-        .text   $1c,$22,"@nb",$22,$1c
-        .byte   $00
-        .text   "         e6fa            d011            297f            858f "
-        .text   "           38              a5f9            e58f            85f"
-        .text   "9            a5fa            e900            85fa            1"
-        .text   "8              20@sdh          aa              68             "
-        .text   " a8              "
+        .byte   $48
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $41
+        .byte   $41
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $36
+        .byte   $38
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $41
+        .byte   $38
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
 L1E00
         .fill   164,$20
 L1EA4
