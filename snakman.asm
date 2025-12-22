@@ -1,6 +1,9 @@
 ; Target assembler: 64tass v1.59.3120 [--ascii --case-sensitive -Wall]
 ; 6502bench SourceGen v1.10.0
         .cpu    "6502"
+LOW_VOL =       $05
+HALF_VOL =      $08
+MAX_VOL =       $0f
 JOYBIT_FIRE =   $20
 INTERLACE_BIT = $80
 KEYCODE_F1 =    $85
@@ -17,7 +20,11 @@ TODSNS  =       $02a2               ;TOD sense during Tape I/O
 CINV    =       $0314               ;Vector: Hardware IRQ Interrupt ($ea31)
 TBUFFR  =       $033c               ;start of Tape I/O Buffer
 VICSCN  =       $0400               ;start of Default Screen Video Matrix
-PAOUT   =       $9111               ;port A output register
+OSC1_FREQ =     $900a               ;oscillator 1 frequency register (on:128-255)
+OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255)
+NOISE_FREQ =    $900d               ;noise source frequency
+VOLUME  =       $900e               ;volume register (bits 4-7 also control some color stuff that isn't used in this)
+PORTAOUT =      $9111               ;port A output register
 V1_INTENABLE =  $911e               ;via 1 interrupt enable register
 scnkey  =       $ff9f               ;Scan Keyboard ($ea87)
 ichrout =       $ffd2               ;Output Vector chrout $f1ca ($0326->$f1ca)
@@ -41,8 +48,8 @@ main
         jsr     init
         jsr     L1491
         lda     #$ff
-        sta     $9005
-        lda     PAOUT               ;check if fire held, if so, enable interlace mode
+        sta     $9005               ;set start of character memory to 0x1C00 and dont modify screen memory location
+        lda     PORTAOUT            ;check if fire held, if so, enable interlace mode
         eor     #$ff
         and     #JOYBIT_FIRE
         beq     _no_interlace
@@ -62,7 +69,7 @@ _L103E
         jsr     L14A6
         lda     #$56
         ldy     #$13
-        sta     CINV
+        sta     CINV                ;set irq handler to $1356
         sty     CINV+1
 _loop
         sei
@@ -120,7 +127,7 @@ _L10A1
 wait_for_start
         jsr     jmp_snd_reset       ;reset all sounds
 _loop
-        lda     PAOUT               ;check that fire button is pressed
+        lda     PORTAOUT            ;check that fire button is pressed
         eor     #$ff                ;flip bits
         and     #JOYBIT_FIRE        ;check bit
         bne     _break              ;return if pressed
@@ -548,33 +555,22 @@ _L1351
         .byte   $16
         .byte   $96
         .byte   $00
-        .byte   $e6
-        .byte   $3f
-        .byte   $d0
-        .byte   $02
-        .byte   $e6
-        .byte   $40
-        .byte   $2c
-        .byte   $be
-        .byte   $1b
-        .byte   $10
-        .byte   $0e
-        .byte   $20
-        .byte   $ba
-        .byte   $16
-        .byte   $2c
-        .byte   $be
-        .byte   $1b
-        .byte   $10
-        .byte   $06
-        .byte   $20
-        .byte   $5f
-        .byte   $14
-        .byte   $4c
-        .byte   $72
-        .byte   $13
 
+        inc     $3f
+        bne     _L135C
+        inc     $40
+_L135C
+        bit     L1BBE
+        bpl     _L136F
+        jsr     L16BA
+        bit     L1BBE
+        bpl     _L136F
+        jsr     _L145F
+        jmp     _L1372
+
+_L136F
         jsr     _L144B
+_L1372
         jsr     jmp_get_input
         lda     #$00
         sta     NDX
@@ -715,6 +711,7 @@ _L1453
         bpl     _L1453
         rts
 
+_L145F
         lda     #$f1
         ldy     #$1f
         sta     ROBUF
@@ -909,7 +906,7 @@ get_input
         php
         lda     #$ff
         sta     $9122
-        lda     PAOUT
+        lda     PORTAOUT
         eor     #$ff
         and     #$1c
         lsr     a
@@ -980,7 +977,7 @@ L15DB
         sty     ROBUF+1
         lda     #$b4
         ldy     #$16
-        sta     CINV
+        sta     CINV                ;set irq handler to $16b4
         sty     CINV+1
         lda     #$00
         sta     $a2
@@ -1007,7 +1004,7 @@ _L1609
         ldx     #$00
         jsr     L15D1
         sei
-        lda     #$56
+        lda     #$56                ;set irq handler to $1356
         sta     CINV
         lda     #$13
         sta     CINV+1
@@ -1105,6 +1102,7 @@ L16B4
 L16B7
         jmp     L16CF
 
+L16BA
         jmp     L16F0
 
 L16BD
@@ -1314,7 +1312,7 @@ snd_reset
         lda     #$00
         ldy     #$04
 _L1819
-        sta     $900a,y
+        sta     OSC1_FREQ,y
         dey
         bpl     _L1819
         rts
@@ -1365,12 +1363,12 @@ _L1861
         rts
 
 L186B
-        lda     #$b4
+        lda     #$b4                ;set irq handler to 16b4
         ldy     #$16
         sta     CINV
         sty     CINV+1
         lda     #$08
-        sta     $900f
+        sta     $900f               ;set screen and border color: background: 1000 inverted: 0 border: 000
         ldy     #$00
 _L187C
         lda     _L18FF,y
@@ -1428,7 +1426,7 @@ _L18CA
         jsr     L148B
         dey
         bpl     _L18CA
-        lda     #$56
+        lda     #$56                ;set irq handler to 1356
         ldy     #$13
         sta     CINV
         sty     CINV+1
@@ -1457,7 +1455,33 @@ _L18FA
         jmp     L17DD
 
 _L18FF
-        .text   $93,$9e,"()*( #$%&' ",$0d,$9e,"     #$%&' ",$0d
+        .byte   $93
+        .byte   $9e
+        .byte   $28
+        .byte   $29
+        .byte   $2a
+        .byte   $28
+        .byte   $20
+        .byte   $23
+        .byte   $24
+        .byte   $25
+        .byte   $26
+        .byte   $27
+        .byte   $20
+        .byte   $0d
+        .byte   $9e
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $20
+        .byte   $23
+        .byte   $24
+        .byte   $25
+        .byte   $26
+        .byte   $27
+        .byte   $20
+        .byte   $0d
         .byte   $13
         .byte   $00
 
@@ -1475,18 +1499,18 @@ _L1926
         bmi     _L1963
         ldy     counter0
         lda     _L194F,y
-        sta     $900c
-        lda     #$05
-        sta     $900e
+        sta     OSC3_FREQ
+        lda     #LOW_VOL
+        sta     VOLUME
         lda     $01
         beq     _L194B
         tay
         dec     $01
-        lda     #$0f
-        sta     $900e
+        lda     #MAX_VOL
+        sta     VOLUME
         lda     _L195B,y
 _L194B
-        sta     $900a
+        sta     OSC1_FREQ
         rts
 
 _L194F
@@ -1519,20 +1543,20 @@ _L1963
         cmp     #$40
         bcc     _L1982
 _L196F
-        lda     #$00
-        sta     $900a
-        lda     #$0f
-        sta     $900e
+        lda     #0
+        sta     OSC1_FREQ
+        lda     #MAX_VOL
+        sta     VOLUME
         ldy     counter0
         lda     _L198D,y
-        sta     $900c
+        sta     OSC3_FREQ
         rts
 
 _L1982
-        lda     #$08
-        sta     $900e
-        lda     #$d8
-        sta     $900c
+        lda     #HALF_VOL
+        sta     VOLUME
+        lda     #216
+        sta     OSC3_FREQ
         rts
 
 _L198D
@@ -1553,11 +1577,11 @@ L1999
         jsr     L16C0
         jsr     L1A2F
         jsr     jmp_snd_reset
-        lda     #$cd
-        sta     $900c
-        lda     #$0f
+        lda     #205
+        sta     OSC3_FREQ
+        lda     #MAX_VOL
 L19A9
-        sta     $900e
+        sta     VOLUME
         cli
 _L19AD
         lda     $a2
@@ -1565,17 +1589,17 @@ _L19AD
         bne     _L19AD
         lda     #$00
         sta     $a2
-        dec     $900c
-        lda     $900c
+        dec     OSC3_FREQ
+        lda     OSC3_FREQ
         cmp     #$a5
         bne     _L19AD
         sei
         jsr     jmp_snd_reset
-        lda     #$0f
-        sta     $900e
-        lda     #$80
-        sta     $900d
-        sta     $900a
+        lda     #MAX_VOL
+        sta     VOLUME
+        lda     #128
+        sta     NOISE_FREQ
+        sta     OSC1_FREQ
         lda     #$00
         sta     $a2
         lda     L1BA9
@@ -1591,14 +1615,14 @@ _L19E6
         bcc     _L19E6
         lda     #$1b
         jsr     L1A3F
-        dec     $900e
+        dec     VOLUME
 _L19F4
         lda     $a2
         cmp     #$09
         bcc     _L19F4
         lda     #$1c
         jsr     L1A3F
-        dec     $900e
+        dec     VOLUME
 _L1A02
         lda     $a2
         cmp     #$0e
@@ -1607,7 +1631,7 @@ _L1A02
         ldx     #$00
         jsr     L1A41
 _L1A0F
-        dec     $900e
+        dec     VOLUME
         beq     _L1A20
         lda     #$00
         sta     $a2
@@ -1620,7 +1644,7 @@ _L1A18
 _L1A20
         jsr     jmp_snd_reset
         sei
-        lda     #$13
+        lda     #$13                ;set irq handler to $1356
         sta     CINV+1
         lda     #$56
         sta     CINV
@@ -1628,7 +1652,7 @@ _L1A20
 
 L1A2F
         sei
-        lda     #$b4
+        lda     #$b4                ;set irq handler to $16b4 and reset $a2 (whatever that is)
         ldy     #$16
         sta     CINV
         sty     CINV+1
@@ -1865,9 +1889,9 @@ init
         ldy     #$00
         sty     counter0
 _loop
-        lda     L1E00,y
+        lda     SCREENMEMLO,y
         jsr     init_vram
-        lda     L1F00,y
+        lda     SCREENMEMHI,y
         jsr     init_vram
         iny
         bne     _loop
@@ -2651,9 +2675,9 @@ L1BC2
         .byte   $20
         .byte   $20
         .byte   $20
-L1E00
+SCREENMEMLO
         .fill   164,$20
 L1EA4
         .fill   92,$20
-L1F00
+SCREENMEMHI
         .fill   256,$20
