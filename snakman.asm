@@ -1,12 +1,31 @@
 ; Target assembler: 64tass v1.59.3120 [--ascii --case-sensitive -Wall]
 ; 6502bench SourceGen v1.10.0
         .cpu    "6502"
+COLOR_BLACK =   0
 FREQ_OFF =      0                   ;setting oscillator freq to this value turns the oscillator off
+COLOR_WHITE =   1
+COLOR_RED =     2
+COLOR_CYAN =    3
+COLOR_PURPLE =  4
 LOW_VOL =       $05
+COLOR_BLUE =    6
+COLOR_YELLOW =  7
 HALF_VOL =      $08
+CHARCODE_SNAK_RIGHT = $0d
+CHARCODE_GHOST1 = $0e
 MAX_VOL =       $0f
+CHARCODE_SNAK_DOWN = $10
+CHARCODE_SNAK_CLOSED = $11
+CHARCODE_TREE = $12
+CHARCODE_FLAG = $13
+CHARCODE_CHERRY = $14
+CHARCODE_STAR = $15
+CHARCODE_MUSICNOTE = $17
+CHARCODE_SNAK_LEFT = $18
+CHARCODE_SNAK_UP = $19
 CHARCODE_EMPTY = $20
 JOYBIT_FIRE =   $20
+CHARCODE_NUM0 = $30
 KEYCODE_E =     $45
 KEYCODE_J =     $4a
 KEYCODE_L =     $4c
@@ -16,15 +35,16 @@ JOYBIT_RIGHT =  $80
 KEYCODE_F1 =    $85
 
 counter0 =      $00                 ;maybe a timer for sound effects?
+CHARCODE_MILKJUG = $16
 BONUS_SPOTHI =  $1e
 HUD_BONUS_SPOTHI = $1f
 HUD_GHOST_SPOTHI = $1f
 BONUS_SPOTLO =  $a4
-INBIT   =       $a7                 ;RS232 temporary for received Bit/Tape
 NDX     =       $c6                 ;Number of Characters in Keyboard Buffer queue
 HUD_BONUS_SPOTLO = $e7
 HUD_GHOST_SPOTLO = $f1
-RIBUF   =       $f7                 ;RS232 Input Buffer Pointer
+SCREENPTR2LO =  $f7                 ;2nd pointer into screen memory used when copying and comparing between 2 screen locations
+SCREENPTR2HI =  $f8
 SCREENPTRLO =   $f9                 ;pointer into screen memory
 SCREENPTRHI =   $fa
 FREKZP  =       $fb                 ;Free Zero Page space for User Programs
@@ -210,7 +230,7 @@ _L1112
 _L1116
         lda     L120B,y
         sty     L1BAB
-        ldx     #$07
+        ldx     #COLOR_YELLOW
         sec
         jsr     jmp_draw_char1
         lda     SCREENPTRLO
@@ -221,8 +241,8 @@ _L1116
         sta     SCREENPTRHI
         pla
         sta     SCREENPTRLO
-        lda     #$20
-        ldx     #$00
+        lda     #CHARCODE_EMPTY
+        ldx     #COLOR_BLACK
         sec
         jmp     jmp_draw_char1
 
@@ -274,8 +294,8 @@ _L1177
         sty     SCREENPTRHI
         ldy     #$05
 _L1196
-        lda     #$20
-        ldx     #$00
+        lda     #CHARCODE_EMPTY
+        ldx     #COLOR_BLACK
         sec
         jsr     jmp_draw_char2
         dey
@@ -356,7 +376,7 @@ GHOST_POINTS_ARR2
         .byte   $72
         .here
         .logical $1207
-screen_strides
+SCREEN_STRIDES
         .byte   1                   ;right
         .byte   $96                 ;-22 with sign-magnitude
         .byte   22
@@ -371,7 +391,7 @@ L120B
 handle_input
         tya
         pha                         ;push direction to stack for later use
-        lda     screen_strides,y
+        lda     SCREEN_STRIDES,y
         bmi     _negative_dir       ;branch if moving in negative direction along either axis
         clc
         adc     SCREENPTRLO         ;increment screenptr to next cell
@@ -398,21 +418,21 @@ _join
         txa
         rts
 
-_L123B
-        lda     #$8d
+move_ghosts
+        lda     #$8d                ;call move_ghost for each of the 4 ghosts
         ldy     #$1b
-        jsr     _L1257
+        jsr     move_ghost
         lda     #$94
         ldy     #$1b
-        jsr     _L1257
+        jsr     move_ghost
         lda     #$9b
         ldy     #$1b
-        jsr     _L1257
+        jsr     move_ghost
         lda     #$a2
         ldy     #$1b
-        jmp     _L1257
+        jmp     move_ghost
 
-_L1257
+move_ghost
         sta     $8b
         sty     $8c
         lda     #$b0
@@ -426,8 +446,8 @@ _L1265
         dey
         bpl     _L1265
         lda     TIMER1LO
-        and     #$03
-        clc
+        and     #$03                ;get random 0-3 value from timer1
+        clc                         ;picking random direction for ghost to move in
         adc     L1BB4
         sta     $8f
         dec     $8f
@@ -440,11 +460,11 @@ _L1279
         lsr     a
         lsr     a
         tay
-        lda     _L1351,y
-        bne     _L128F
-        jmp     _L131F
+        lda     SCREEN_STRIDES2,y
+        bne     _can_move           ;not so sure this is actually about a move being blocked or not, but somehow its about a valid move delta vs 0 being read from the array
+        jmp     _move_blocked
 
-_L128F
+_can_move
         bmi     _L12A0
         clc
         adc     L1BB0
@@ -455,10 +475,10 @@ _L128F
         bne     _L12B3
 _L12A0
         and     #$7f
-        sta     INBIT
+        sta     $a7
         sec
         lda     L1BB0
-        sbc     INBIT
+        sbc     $a7
         sta     SCREENPTRLO
         lda     L1BB1
         sbc     #$00
@@ -517,11 +537,11 @@ _L12E5
         sta     L1BB6
         pla
         sta     L1BB5
-        lda     #$0e
+        lda     #CHARCODE_GHOST1
         ldx     L1BB3
         sec
         jsr     jmp_draw_char1
-_L131F
+_move_blocked
         ldy     #$06
 _L1321
         lda     ($8d),y
@@ -572,12 +592,14 @@ _L1329
         .byte   $00
         .byte   $18
         .byte   $20
-_L1351
-        .byte   $01
-        .byte   $81
-        .byte   $16
-        .byte   $96
-        .byte   $00
+        .logical $1351
+SCREEN_STRIDES2
+        .byte   1                   ;right
+        .byte   $81                 ;left, -1 with sign-magnitude
+        .byte   22
+        .byte   $96                 ;-22 with sign-magnitude
+        .byte   $00                 ;0 for not moving?
+        .here
 
         inc     $3f
         bne     _L135C
@@ -629,7 +651,7 @@ _L13AA
         bpl     _L13C6
         lda     #$0c
         sta     L1BAD
-        jsr     _L123B
+        jsr     move_ghosts
         bit     L1BBB
         bpl     _L13C6
         bit     L1BBE
@@ -685,40 +707,44 @@ _L13E5
 _space_occupied
         jmp     L16B4
 
-L1428
-        .byte   $12
-        .byte   $14
-        .byte   $13
-        .byte   $15
-        .byte   $17
-        .byte   $16
-        .byte   $17
-        .byte   $16
-L1430
-        .byte   $06
-        .byte   $02
-        .byte   $07
-        .byte   $03
-        .byte   $07
-        .byte   $04
-        .byte   $07
-        .byte   $04
+        .logical $1428
+BONUS_SPRITES_ARR
+        .byte   CHARCODE_TREE
+        .byte   CHARCODE_CHERRY
+        .byte   CHARCODE_FLAG
+        .byte   CHARCODE_STAR
+        .byte   CHARCODE_MUSICNOTE
+        .byte   CHARCODE_MILKJUG
+        .byte   CHARCODE_MUSICNOTE
+        .byte   CHARCODE_MILKJUG
+        .here
+        .logical $1430
+BONUS_COLORS_ARR
+        .byte   COLOR_BLUE
+        .byte   COLOR_RED
+        .byte   COLOR_YELLOW
+        .byte   COLOR_CYAN
+        .byte   COLOR_YELLOW
+        .byte   COLOR_PURPLE
+        .byte   COLOR_YELLOW
+        .byte   COLOR_PURPLE
+        .here
         .logical $1438
 BONUS_POINTS_ARR
-        .byte   $20                 ;cherry points, 2000
         .byte   $20                 ;tree points, 2000
+        .byte   $20                 ;cherry points, 2000
         .byte   $05                 ;flag points, 500
         .byte   $10                 ;star points, 1000
         .byte   $01                 ;music note points, 100
         .byte   $02                 ;milk jug points, 200
-        .byte   $01
-        .byte   $02                 ;don't know which 20 and which 01/02 are which or why theres 2 two 01/02 yet
+        .byte   $01                 ;music note points, 100
+        .byte   $02                 ;milk jug points, 200
         .here
 
 draw_bonus
         tay
-        lda     L1428,y
-        ldx     L1430,y
+        lda     BONUS_SPRITES_ARR,y
+        ldx     BONUS_COLORS_ARR,y
         sec
         jmp     jmp_draw_char1
 
@@ -728,8 +754,8 @@ L144B
         sta     SCREENPTRLO
         sty     SCREENPTRHI
 _L1453
-        ldx     #$00
-        lda     #$20
+        ldx     #COLOR_BLACK
+        lda     #CHARCODE_EMPTY
         sec
         jsr     jmp_draw_char2
         dey
@@ -741,11 +767,11 @@ draw_ghost_points
         ldy     #HUD_GHOST_SPOTHI
         sta     SCREENPTRLO
         sty     SCREENPTRHI
-        lda     #$0e
-        ldx     #$01
+        lda     #CHARCODE_GHOST1
+        ldx     #COLOR_WHITE
         sec
         jsr     jmp_draw_char1
-        inc     SCREENPTRLO
+        inc     SCREENPTRLO         ;move screen pointer a couple characters to the right for the number
         inc     SCREENPTRLO
         ldy     ghost_eat_streak
         lda     GHOST_POINTS_ARR,y  ;load points for next ghost for drawing to screen
@@ -981,21 +1007,21 @@ L15A2
         beq     _L15CA
         cmp     #$02
         beq     _L15CD
-        lda     #$18
+        lda     #CHARCODE_SNAK_LEFT
         .byte   $2c
 _L15C4
-        lda     #$11
+        lda     #CHARCODE_SNAK_CLOSED
         .byte   $2c
 _L15C7
-        lda     #$0d
+        lda     #CHARCODE_SNAK_RIGHT
         .byte   $2c
 _L15CA
-        lda     #$19
+        lda     #CHARCODE_SNAK_UP
         .byte   $2c
 _L15CD
-        lda     #$10
+        lda     #CHARCODE_SNAK_DOWN
 L15CF
-        ldx     #$07
+        ldx     #COLOR_YELLOW
 L15D1
         sec
         jmp     jmp_draw_char1
@@ -1093,7 +1119,7 @@ _L1653
         sta     ($8d),y
         iny
         ldx     $8f
-        lda     L1B21,x
+        lda     GHOST_COLORS_ARR,x
         sta     ($8d),y
         iny
         sta     ($8d),y
@@ -1159,11 +1185,11 @@ L16CF
         jsr     L16CC
         lda     #$d7
         sta     SCREENPTRLO
-        lda     #$1e
+        lda     #$1e                ;looks to be the screen address of one character left of the lives counter area
         sta     SCREENPTRHI
         ldy     loop1+2
-        lda     #$20
-        ldx     #$00
+        lda     #CHARCODE_EMPTY
+        ldx     #COLOR_BLACK
 _L16E4
         iny
         cpy     #$04
@@ -1316,25 +1342,25 @@ draw_points
         lsr     a
         lsr     a
         bne     _L17F9
-        lda     #$20
-        ldx     #$00
+        lda     #CHARCODE_EMPTY
+        ldx     #COLOR_BLACK
 _L17F2
         jsr     L17DD
         inc     SCREENPTRLO
         bne     _L17FF
 _L17F9
-        ora     #$30
-        ldx     #$07
+        ora     #CHARCODE_NUM0      ;add offset from charcode for '0'
+        ldx     #COLOR_YELLOW
         bne     _L17F2
 
 _L17FF
         pla
         and     #$0f
-        ora     #$30
-        ldx     #$07
+        ora     #CHARCODE_NUM0      ;add offset from charcode for '0'
+        ldx     #COLOR_YELLOW
         jsr     L17DD
         inc     SCREENPTRLO
-        lda     #$30
+        lda     #CHARCODE_NUM0      ;draw 2 trailing 0s
         jsr     jmp_draw_char1
         inc     SCREENPTRLO
         jmp     jmp_draw_char1
@@ -1357,37 +1383,37 @@ L1820
         adc     #$01
         sta     SCREENPTRHI
         lda     #$57
-        sta     RIBUF
+        sta     SCREENPTR2LO
         lda     #$1d
-        sta     RIBUF+1
+        sta     SCREENPTR2HI
         ldy     #$00
 _L1837
         lda     (SCREENPTRLO),y
-        sta     (RIBUF),y
+        sta     (SCREENPTR2LO),y
         lda     SCREENPTRLO
         bne     _L1841
         dec     SCREENPTRHI
 _L1841
         dec     SCREENPTRLO
-        lda     RIBUF
+        lda     SCREENPTR2LO
         bne     _L1849
-        dec     RIBUF+1
+        dec     SCREENPTR2HI
 _L1849
-        dec     RIBUF
-        lda     RIBUF+1
+        dec     SCREENPTR2LO
+        lda     SCREENPTR2HI
         cmp     #$1b
         bne     _L1837
         lda     #$00
         ldy     #$1d
-        sta     RIBUF
+        sta     SCREENPTR2LO
         sta     SCREENPTRLO
-        sty     RIBUF+1
+        sty     SCREENPTR2HI
         lda     #$81
         sta     SCREENPTRHI
         ldy     #$ff
 _L1861
         lda     (SCREENPTRLO),y
-        sta     (RIBUF),y
+        sta     (SCREENPTR2LO),y
         dey
         cpy     #$57
         bne     _L1861
@@ -1411,11 +1437,11 @@ _L187C
 _L1889
         sei
         lda     #$44
-        ldy     #$1a
-        sta     RIBUF
-        sty     RIBUF+1
+        ldy     #$1a                ;not in screenmem, maybe screenptr2 isnt actually pointing to screen mem
+        sta     SCREENPTR2LO
+        sty     SCREENPTR2HI
         lda     #$2b
-        ldy     #$1e
+        ldy     #$1e                ;not sure what this is, its just above the top right corner of maze, maybe last spot the score extends into
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         ldx     #$00
@@ -1423,11 +1449,11 @@ _L1889
         pha
         ldy     #$00
 _L18A0
-        inc     RIBUF
+        inc     SCREENPTR2LO
         bne     _L18A6
-        inc     RIBUF+1
+        inc     SCREENPTR2HI
 _L18A6
-        lda     (RIBUF),y
+        lda     (SCREENPTR2LO),y
         pha
         lsr     a
         lsr     a
@@ -1445,18 +1471,18 @@ _L18A6
         cpx     #$dc
         bne     _L18A0
         pla
-        lda     #$1e
+        lda     #$1e                ;screen address of leftmost cell of ghost home
         sta     SCREENPTRHI
         lda     #$fb
         sta     SCREENPTRLO
         ldy     #$03
-_L18CA
-        ldx     L1B21,y
-        lda     #$0e
+_loop
+        ldx     GHOST_COLORS_ARR,y
+        lda     #CHARCODE_GHOST1
         sec
         jsr     jmp_draw_char2
         dey
-        bpl     _L18CA
+        bpl     _loop
         lda     #$56                ;set irq handler to 1356
         ldy     #$13
         sta     CINV
@@ -1527,27 +1553,27 @@ _skip_clamp
         dec     counter0
         bmi     _wrap_counter
         bit     L1BBE
-        bmi     play_powerup_sound
+        bmi     play_powerup_sound  ;play powerup sound if high bit of 1BBE is set
         ldy     counter0
         lda     SFX1,y
         sta     OSC3_FREQ
         lda     #LOW_VOL
         sta     VOLUME
-        lda     $01
-        beq     _L194B
+        lda     $01                 ;if *0x01 != 0, play the pellet sound alongside normal sound
+        beq     _no_pellet_sound
         tay
-        dec     $01
+        dec     $01                 ;clear pellet eat flag
         lda     #MAX_VOL
         sta     VOLUME
         lda     SFX2,y
-_L194B
+_no_pellet_sound
         sta     OSC1_FREQ
         rts
 
         .logical $194f
 SFX1
         .byte   216                 ;sound effect played by OSC3 (high)
-        .byte   218
+        .byte   218                 ;maybe the normal background sound played all the time
         .byte   220
         .byte   222
         .byte   224
@@ -1562,7 +1588,7 @@ SFX1
         .logical $195b
 SFX2
         .byte   FREQ_OFF            ;sound effect played by OSC1 (low)
-        .byte   144
+        .byte   144                 ;maybe the sound played when eating pellets
         .byte   146
         .byte   148
         .byte   150
@@ -1697,18 +1723,30 @@ _L1A2F
         rts
 
 _L1A3F
-        ldx     #$07
+        ldx     #COLOR_YELLOW
 _L1A41
         sec
         jmp     jmp_draw_char1
 
         .byte   $31
-        .fill   9,$11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
         .byte   $14
         .byte   $2b
         .byte   $bb
         .byte   $cb
-        .fill   5,$bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
         .byte   $bc
         .byte   $bb
         .byte   $b2
@@ -1869,12 +1907,21 @@ _L1A41
         .byte   $61
         .fill   9,$11
         .byte   $15
-L1B21
-        .byte   $02
-        .byte   $07
-        .byte   $04
-        .byte   $03
-        .fill   8,$00
+        .logical $1b21
+GHOST_COLORS_ARR
+        .byte   COLOR_RED
+        .byte   COLOR_YELLOW
+        .byte   COLOR_PURPLE
+        .byte   COLOR_CYAN
+        .here
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
         .byte   $03
         .byte   $00
         .byte   $00
@@ -1975,8 +2022,8 @@ L1B9E
         .here
         .logical $1b9f
         .byte   %00101000           ;ghost home door tile
-        .byte   %00010100
-        .byte   %00101000
+        .byte   %00010100           ;this seems to be character number 1 in the character set, but its here instead of at 1C00??
+        .byte   %00101000           ;so charcode 0
 L1BA2
         .byte   %00010100
 L1BA3
@@ -1988,7 +2035,7 @@ L1BA5
         .here
         .logical $1ba7
         .byte   %00000000           ;horizontal wall tile
-        .byte   %00000000
+        .byte   %00000000           ;charcode 0x01
 L1BA9
         .byte   %11111111
 L1BAA
@@ -2006,7 +2053,7 @@ L1BAE
 L1BAF
         .byte   %00111100           ;vertical wall tile
 L1BB0
-        .byte   %00111100
+        .byte   %00111100           ;charcode 0x02
 L1BB1
         .byte   %00111100
         .byte   %00111100
@@ -2022,7 +2069,7 @@ L1BB6
         .logical $1bb7
         .byte   %00000000           ;top left corner tile
 input_direction
-        .byte   %00000000
+        .byte   %00000000           ;charcode 0x03
         .byte   %00111111
 L1BBA
         .byte   %00111111
@@ -2038,7 +2085,7 @@ L1BBE
         .logical $1bbf
 L1BBF
         .byte   %00000000           ;top right corner tile
-        .byte   %00000000
+        .byte   %00000000           ;charcode 0x04
 L1BC1
         .byte   %11111100
 ghost_eat_streak
@@ -2050,7 +2097,7 @@ ghost_eat_streak
         .here
         .logical $1bc7
         .byte   %00111100           ;bottom right corner tile
-        .byte   %00111100
+        .byte   %00111100           ;charcode 0x05
         .byte   %11111100
         .byte   %11111100
         .byte   %11111100
@@ -2060,7 +2107,7 @@ ghost_eat_streak
         .here
         .logical $1bcf
         .byte   %00111100           ;bottom left corner tile
-        .byte   %00111100
+        .byte   %00111100           ;charcode 0x06
         .byte   %00111111
         .byte   %00111111
         .byte   %00111111
@@ -2070,7 +2117,7 @@ ghost_eat_streak
         .here
         .logical $1bd7
         .byte   %00000000           ;downward T tile
-        .byte   %00000000
+        .byte   %00000000           ;charcode 0x07
         .byte   %11111111
         .byte   %11111111
         .byte   %11111111
@@ -2080,7 +2127,7 @@ ghost_eat_streak
         .here
         .logical $1bdf
         .byte   %00000000           ;empty tile
-        .byte   %00000000
+        .byte   %00000000           ;charcode 0x08
         .byte   %00000000
         .byte   %00000000
         .byte   %00000000
@@ -2090,7 +2137,7 @@ ghost_eat_streak
         .here
         .logical $1be7
         .byte   %00111100           ;leftward T tile
-        .byte   %00111100
+        .byte   %00111100           ;charcode 0x09
         .byte   %11111100
         .byte   %11111100
         .byte   %11111100
@@ -2100,7 +2147,7 @@ ghost_eat_streak
         .here
         .logical $1bef
         .byte   %00111100           ;rightward T tile
-        .byte   %00111100
+        .byte   %00111100           ;charcode 0x0a
         .byte   %00111111
         .byte   %00111111
         .byte   %00111111
@@ -2110,7 +2157,7 @@ ghost_eat_streak
         .here
         .logical $1bf7
         .byte   %00000000           ;small pellet sprite
-        .byte   %00000000
+        .byte   %00000000           ;charcode 0x0b
         .byte   %00011000
         .byte   %00111100
         .byte   %00111100
@@ -2120,7 +2167,7 @@ ghost_eat_streak
         .here
         .logical $1bff
         .byte   %00000000           ;power pellet sprite
-        .byte   %00011000
+        .byte   %00011000           ;charcode 0x0c
         .byte   %00111100
         .byte   %01111110
         .byte   %01111110
@@ -2130,7 +2177,7 @@ ghost_eat_streak
         .here
         .logical $1c07
         .byte   %00011100           ;snakman sprite right-facing
-        .byte   %00111110
+        .byte   %00111110           ;charcode 0x0d
         .byte   %01110000
         .byte   %01100000
         .byte   %01100000
@@ -2140,7 +2187,7 @@ ghost_eat_streak
         .here
         .logical $1c0f
         .byte   %00111100           ;ghost sprite 1
-        .byte   %01111110
+        .byte   %01111110           ;charcode 0x0e
         .byte   %01101010
         .byte   %01101010
         .byte   %01101010
@@ -2150,7 +2197,7 @@ ghost_eat_streak
         .here
         .logical $1c17
         .byte   %00111100           ;ghost sprite 2
-        .byte   %01111110
+        .byte   %01111110           ;charcode 0x0f
         .byte   %01101010
         .byte   %01101010
         .byte   %01101010
@@ -2160,7 +2207,7 @@ ghost_eat_streak
         .here
         .logical $1c1f
         .byte   %00011000           ;snakman sprite downward-facing
-        .byte   %00111100
+        .byte   %00111100           ;charcode 0x10
         .byte   %01111110
         .byte   %11100111
         .byte   %11000011
@@ -2170,7 +2217,7 @@ ghost_eat_streak
         .here
         .logical $1c27
         .byte   %00011000           ;snakman sprite mouth closed
-        .byte   %00111100
+        .byte   %00111100           ;charcode 0x11
         .byte   %01111110
         .byte   %01111110
         .byte   %01111110
@@ -2180,7 +2227,7 @@ ghost_eat_streak
         .here
         .logical $1c2f
         .byte   %00001000           ;bonus item sprite - christmas tree
-        .byte   %00011000
+        .byte   %00011000           ;charcode 0x12
         .byte   %00111100
         .byte   %00111100
         .byte   %01111110
@@ -2190,7 +2237,7 @@ ghost_eat_streak
         .here
         .logical $1c37
         .byte   %00000110           ;bonus item sprite - flag
-        .byte   %10001110
+        .byte   %10001110           ;charcode 0x13
         .byte   %01111110
         .byte   %00111110
         .byte   %00011110
@@ -2200,7 +2247,7 @@ ghost_eat_streak
         .here
         .logical $1c3f
         .byte   %11100000           ;bonus item sprite - cherries
-        .byte   %01011000
+        .byte   %01011000           ;charcode 0x14
         .byte   %01000100
         .byte   %00100010
         .byte   %01110111
@@ -2210,7 +2257,7 @@ ghost_eat_streak
         .here
         .logical $1c47
         .byte   %00001000           ;bonus item sprite - star
-        .byte   %00011100
+        .byte   %00011100           ;charcode 0x15
         .byte   %11111111
         .byte   %01111110
         .byte   %00111100
@@ -2220,7 +2267,7 @@ ghost_eat_streak
         .here
         .logical $1c4f
         .byte   %00000000           ;bonus item sprite - milk can??
-        .byte   %00011000
+        .byte   %00011000           ;charcode 0x16
         .byte   %00111111
         .byte   %01111101
         .byte   %01111111
@@ -2230,7 +2277,7 @@ ghost_eat_streak
         .here
         .logical $1c57
         .byte   %00001111           ;bonus item sprite - music note
-        .byte   %00001000
+        .byte   %00001000           ;charcode 0x17
         .byte   %00001111
         .byte   %00001000
         .byte   %00001000
@@ -2240,7 +2287,7 @@ ghost_eat_streak
         .here
         .logical $1c5f
         .byte   %00111000           ;snakman sprite left-facing
-        .byte   %01111100
+        .byte   %01111100           ;charcode 0x18
         .byte   %00001110
         .byte   %00000110
         .byte   %00000110
@@ -2250,7 +2297,7 @@ ghost_eat_streak
         .here
         .logical $1c67
         .byte   %00000000           ;snakman sprite upward-facing
-        .byte   %01000010
+        .byte   %01000010           ;charcode 0x19
         .byte   %11000011
         .byte   %11000011
         .byte   %11100111
@@ -2260,7 +2307,7 @@ ghost_eat_streak
         .here
         .logical $1c6f
         .byte   %11000011           ;snakman death frame 1
-        .byte   %11100111
+        .byte   %11100111           ;charcode 0x1a
         .byte   %01111110
         .byte   %00111100
         .byte   %00111100
@@ -2270,7 +2317,7 @@ ghost_eat_streak
         .here
         .logical $1c77
         .byte   %10001001           ;snakman death frame 2
-        .byte   %01001010
+        .byte   %01001010           ;charcode 0x1b
         .byte   %00101100
         .byte   %11111111
         .byte   %00011000
@@ -2280,7 +2327,7 @@ ghost_eat_streak
         .here
         .logical $1c7f
         .byte   %00000000           ;snakman death frame 3
-        .byte   %01000000
+        .byte   %01000000           ;charcode 0x1c
         .byte   %00000000
         .byte   %00000010
         .byte   %00000000
@@ -2319,7 +2366,7 @@ ghost_eat_streak
         .byte   %11110000
         .here
         .logical $1c9f
-        .byte   %00000000
+        .byte   %00000000           ;character 0x20, empty space
         .byte   %00000000
         .byte   %00000000
         .byte   %00000000
