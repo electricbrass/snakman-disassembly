@@ -23,6 +23,9 @@ CHARCODE_STAR = $15
 CHARCODE_MUSICNOTE = $17
 CHARCODE_SNAK_LEFT = $18
 CHARCODE_SNAK_UP = $19
+CHARCODE_SNAK_DEATH1 = $1a
+CHARCODE_SNAK_DEATH2 = $1b
+CHARCODE_SNAK_DEATH3 = $1c
 CHARCODE_EMPTY = $20
 JOYBIT_FIRE =   $20
 CHARCODE_NUM0 = $30
@@ -35,10 +38,12 @@ JOYBIT_RIGHT =  $80
 KEYCODE_F1 =    $85
 
 counter0 =      $00                 ;maybe a timer for sound effects?
+counter1 =      $01
 CHARCODE_MILKJUG = $16
 BONUS_SPOTHI =  $1e
 HUD_BONUS_SPOTHI = $1f
 HUD_GHOST_SPOTHI = $1f
+TIME    =       $a2                 ;counts time by 1/60s
 BONUS_SPOTLO =  $a4
 NDX     =       $c6                 ;Number of Characters in Keyboard Buffer queue
 HUD_BONUS_SPOTLO = $e7
@@ -51,6 +56,7 @@ UNKNOWNPTRLO =  $fb
 UNKNOWNPTRHI =  $fc
 KEYD    =       $0277               ;Keyboard Buffer Queue (FIFO)
 CINV    =       $0314               ;Vector: Hardware IRQ Interrupt ($ea31)
+lives   =       $1b88
 BONUS_SPOT =    $1ea4               ;location on screen when bonus items spawn
 OSC1_FREQ =     $900a               ;oscillator 1 frequency register (on:128-255)
 OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255)
@@ -104,16 +110,16 @@ _L103E
         jsr     L14A6
         lda     #$56
         ldy     #$13
-        sta     CINV                ;set irq handler to $1356
+        sta     CINV                ;set irq handler to irq_handler
         sty     CINV+1
 _loop
         sei
         bit     L1BBB
         bpl     _L106A
         jsr     jmp_snd_reset
-        jsr     L1999
-        jsr     L14A9
-        dec     loop1+2
+        jsr     animate_death
+        jsr     jmp_reset_positions
+        dec     lives
         bmi     new_game
         jsr     L14A3
         jsr     L14A6
@@ -190,10 +196,10 @@ _no_input
         rts
 
 L10D8
-        lda     L1BA9
+        lda     PLAYER_POSLO
         sta     SCREENPTRLO
         pha
-        lda     L1BAA
+        lda     PLAYER_POSHI
         sta     SCREENPTRHI
         pha
         ldy     input_direction
@@ -233,9 +239,9 @@ _L1116
         sec                         ;access_char(mode=write)
         jsr     jmp_access_char
         lda     SCREENPTRLO
-        sta     L1BA9
+        sta     PLAYER_POSLO
         lda     SCREENPTRHI
-        sta     L1BAA
+        sta     PLAYER_POSHI
         pla
         sta     SCREENPTRHI
         pla
@@ -252,7 +258,7 @@ _L113A
         lda     #$ff
         sta     L1BBF
         lda     #$06
-        sta     $01
+        sta     counter1
         dec     L1BBA
         jmp     _L1116
 
@@ -600,6 +606,7 @@ SCREEN_STRIDES2
         .byte   $00                 ;0 for not moving?
         .here
 
+irq_handler
         inc     $3f
         bne     _L135C
         inc     $40
@@ -704,7 +711,7 @@ _L13E5
         lda     BONUS_POINTS_ARR,y
         jsr     jmp_draw_points
 _space_occupied
-        jmp     L16B4
+        jmp     jmp_update_time
 
         .logical $1428
 BONUS_SPRITES_ARR
@@ -824,8 +831,8 @@ L14A3
 L14A6
         jmp     L162D
 
-L14A9
-        jmp     L1647
+jmp_reset_positions
+        jmp     reset_positions
 
         jmp     L15CF
 
@@ -992,8 +999,8 @@ _end_input
         rts
 
 L15A2
-        lda     L1BA9
-        ldy     L1BAA
+        lda     PLAYER_POSLO
+        ldy     PLAYER_POSHI
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         clc                         ;access_char(mode=read)
@@ -1026,41 +1033,41 @@ L15D1
         jmp     jmp_access_char
 
 L15D5
-        lda     L1BA9
-        ldy     L1BAA
+        lda     PLAYER_POSLO
+        ldy     PLAYER_POSHI
 L15DB
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         lda     #$b4
         ldy     #$16
-        sta     CINV                ;set irq handler to $16b4
+        sta     CINV                ;set irq handler to jmp_update_time
         sty     CINV+1
         lda     #$00
-        sta     $a2
+        sta     TIME
         lda     #$1a
         jsr     L15CF
         cli
 _L15F3
-        lda     $a2
+        lda     TIME
         cmp     #$05
         bcc     _L15F3
         lda     #$1b
         jsr     L15CF
 _L15FE
-        lda     $a2
+        lda     TIME
         cmp     #$09
         bcc     _L15FE
         lda     #$1c
         jsr     L15CF
 _L1609
-        lda     $a2
+        lda     TIME
         cmp     #$0d
         bcc     _L1609
         lda     #$20
         ldx     #$00
         jsr     L15D1
         sei
-        lda     #$56                ;set irq handler to $1356
+        lda     #$56                ;set irq handler to irq_handler
         sta     CINV
         lda     #$13
         sta     CINV+1
@@ -1069,7 +1076,7 @@ _L1609
 L1622
         clc
         lda     #$d8
-        adc     loop1+2
+        adc     lives
         ldy     #$1e
         jsr     L15DB
 L162D
@@ -1077,16 +1084,16 @@ L162D
         ldy     #$1f
         sta     SCREENPTRLO
         sty     SCREENPTRHI
-        sta     L1BA9
-        sty     L1BAA
+        sta     PLAYER_POSLO
+        sty     PLAYER_POSHI
         lda     #$01
         sta     L1BAB
         sta     input_direction     ;start game facing up
         lda     #$10
         bne     L15CF
 
-L1647
-        lda     #$03
+reset_positions
+        lda     #$03                ;not 100% sure that's all this does
         sta     $8f
         lda     #$86
         sta     $8d
@@ -1147,13 +1154,13 @@ _L1653
         rts
 
 _L16B0
-        .byte   $fb
+        .byte   $fb                 ;might be ghost starting positions?
         .byte   $fc
         .byte   $fd
         .byte   $fe
 
-L16B4
-        jmp     L17E1
+jmp_update_time
+        jmp     update_time
 
 L16B7
         jmp     L16CF
@@ -1186,7 +1193,7 @@ L16CF
         sta     SCREENPTRLO
         lda     #$1e                ;looks to be the screen address of one character left of the lives counter area
         sta     SCREENPTRHI
-        ldy     loop1+2
+        ldy     lives
         lda     #CHARCODE_EMPTY
         ldx     #COLOR_BLACK
 _L16E4
@@ -1288,9 +1295,9 @@ _L1785
         rts
 
 _L1792
-        cmp     L1BA9
+        cmp     PLAYER_POSLO
         bne     _L179E
-        cpy     L1BAA
+        cpy     PLAYER_POSHI
         bne     _L179E
         sec
         .byte   $24
@@ -1330,9 +1337,9 @@ L17DD
         sec                         ;access_char(mode=write)
         jmp     jmp_access_char
 
-L17E1
-        jsr     udtim
-        jmp     $eb15
+update_time
+        jsr     udtim               ;see https://www.mdawson.net/vic20chrome/vic20/docs/kernel_disassembly.txt#:~:text=%3B%20IRQ%20handler
+        jmp     $eb15               ;undocumented kernal routine, clear timer interrupt flag and pop Y,X,A from stack (in that order)
 
 draw_points
         pha                         ;draw ghost and bonus item points
@@ -1419,7 +1426,7 @@ _loop2
         rts
 
 setup_screen
-        lda     #$b4                ;set irq handler to 16b4
+        lda     #$b4                ;set irq handler to jmp_update_time
         ldy     #$16
         sta     CINV
         sty     CINV+1
@@ -1482,7 +1489,7 @@ _loop1
         jsr     jmp_access_char_with_offset
         dey
         bpl     _loop1
-        lda     #$56                ;set irq handler to 1356
+        lda     #$56                ;set irq handler to irq_handler
         ldy     #$13
         sta     CINV
         sty     CINV+1
@@ -1560,10 +1567,10 @@ _skip_clamp
         sta     OSC3_FREQ
         lda     #LOW_VOL
         sta     VOLUME
-        lda     $01                 ;if *0x01 != 0, play the pellet sound alongside normal sound
+        lda     counter1            ;if *0x01 != 0, play the pellet sound alongside normal sound
         beq     _no_pellet_sound
         tay
-        dec     $01                 ;clear pellet eat flag
+        dec     counter1            ;clear pellet eat flag
         lda     #MAX_VOL
         sta     VOLUME
         lda     SFX2,y
@@ -1637,26 +1644,26 @@ SFX_POWERUP
         .byte   227
         .here
 
-L1999
+animate_death
         jsr     L16C0
-        jsr     _L1A2F
+        jsr     reset_time_irq
         jsr     jmp_snd_reset
         lda     #205
         sta     OSC3_FREQ
         lda     #MAX_VOL
         sta     VOLUME
-        cli
-_L19AD
-        lda     $a2
-        cmp     #$03
-        bne     _L19AD
+        cli                         ;enable interrupts
+_wait
+        lda     TIME
+        cmp     #3
+        bne     _wait               ;wait until time == 3
         lda     #$00
-        sta     $a2
+        sta     TIME                ;reset time to 0
         dec     OSC3_FREQ           ;i think this might be the falling tone that plays when dying?
         lda     OSC3_FREQ
-        cmp     #$a5
-        bne     _L19AD
-        sei
+        cmp     #165                ;lower OSC3_FREQ from 205 to 165, waiting a short time at each step
+        bne     _wait
+        sei                         ;disable interrupts
         jsr     jmp_snd_reset
         lda     #MAX_VOL
         sta     VOLUME
@@ -1664,42 +1671,42 @@ _L19AD
         sta     NOISE_FREQ
         sta     OSC1_FREQ
         lda     #$00
-        sta     $a2
-        lda     L1BA9
-        ldy     L1BAA
+        sta     TIME                ;reset time
+        lda     PLAYER_POSLO
+        ldy     PLAYER_POSHI
         sta     SCREENPTRLO
         sty     SCREENPTRHI
-        lda     #$1a
-        jsr     _L1A3F
+        lda     #CHARCODE_SNAK_DEATH1
+        jsr     draw_yellow_char
         cli
-_L19E6
-        lda     $a2
-        cmp     #$04
-        bcc     _L19E6
-        lda     #$1b
-        jsr     _L1A3F
+_wait_death1
+        lda     TIME
+        cmp     #4
+        bcc     _wait_death1
+        lda     #CHARCODE_SNAK_DEATH2
+        jsr     draw_yellow_char
         dec     VOLUME
-_L19F4
-        lda     $a2
-        cmp     #$09
-        bcc     _L19F4
-        lda     #$1c
-        jsr     _L1A3F
+_wait_death2
+        lda     TIME
+        cmp     #9
+        bcc     _wait_death2
+        lda     #CHARCODE_SNAK_DEATH3
+        jsr     draw_yellow_char
         dec     VOLUME
-_L1A02
-        lda     $a2
-        cmp     #$0e
-        bcc     _L1A02
+wait_death3
+        lda     TIME
+        cmp     #14
+        bcc     wait_death3
         lda     #CHARCODE_EMPTY
         ldx     #COLOR_BLACK
-        jsr     _L1A41
+        jsr     draw_char
 _L1A0F
         dec     VOLUME
         beq     _L1A20
         lda     #$00
-        sta     $a2
+        sta     TIME
 _L1A18
-        lda     $a2
+        lda     TIME
         cmp     #$05
         bcs     _L1A0F
         bcc     _L1A18
@@ -1707,25 +1714,25 @@ _L1A18
 _L1A20
         jsr     jmp_snd_reset
         sei
-        lda     #$13                ;set irq handler to $1356
+        lda     #$13                ;set irq handler to irq_handler
         sta     CINV+1
         lda     #$56
         sta     CINV
         rts
 
-_L1A2F
+reset_time_irq
         sei
-        lda     #$b4                ;set irq handler to $16b4 and reset $a2 (whatever that is)
+        lda     #$b4                ;set irq handler to jmp_update_time and reset TIME
         ldy     #$16
         sta     CINV
         sty     CINV+1
         lda     #$00
-        sta     $a2
+        sta     TIME
         rts
 
-_L1A3F
+draw_yellow_char
         ldx     #COLOR_YELLOW
-_L1A41
+draw_char
         sec                         ;access_char(mode=write)
         jmp     jmp_access_char
 
@@ -2078,9 +2085,9 @@ L1BA5
         .logical $1ba7
         .byte   %00000000           ;horizontal wall tile
         .byte   %00000000           ;charcode 0x01
-L1BA9
+PLAYER_POSLO
         .byte   %11111111
-L1BAA
+PLAYER_POSHI
         .byte   %11111111
 L1BAB
         .byte   %11111111
