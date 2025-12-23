@@ -16,10 +16,16 @@ JOYBIT_RIGHT =  $80
 KEYCODE_F1 =    $85
 
 counter0 =      $00                 ;maybe a timer for sound effects?
+BONUS_SPOTHI =  $1e
+HUD_BONUS_SPOTHI = $1f
+HUD_GHOST_SPOTHI = $1f
+BONUS_SPOTLO =  $a4
 INBIT   =       $a7                 ;RS232 temporary for received Bit/Tape
 NDX     =       $c6                 ;Number of Characters in Keyboard Buffer queue
+HUD_BONUS_SPOTLO = $e7
+HUD_GHOST_SPOTLO = $f1
 RIBUF   =       $f7                 ;RS232 Input Buffer Pointer
-SCREENPTRLO =   $f9                 ;might be a pointer into screen memory, or it might be a pointer to some other place the maze and positions are stored
+SCREENPTRLO =   $f9                 ;pointer into screen memory
 SCREENPTRHI =   $fa
 FREKZP  =       $fb                 ;Free Zero Page space for User Programs
 KEYD    =       $0277               ;Keyboard Buffer Queue (FIFO)
@@ -32,6 +38,7 @@ OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255
 NOISE_FREQ =    $900d               ;noise source frequency
 VOLUME  =       $900e               ;volume register (bits 4-7 also control some color stuff that isn't used in this)
 VIA1_PORTAOUT = $9111               ;port A output register
+TIMER1LO =      $9114
 VIA1_INTENABLE = $911e              ;via 1 interrupt enable register
 VIA2_PORTBOUT = $9120
 VIA2_DATADIRECTION = $9122
@@ -205,7 +212,7 @@ _L1116
         sty     L1BAB
         ldx     #$07
         sec
-        jsr     L1488
+        jsr     jmp_draw_char1
         lda     SCREENPTRLO
         sta     L1BA9
         lda     SCREENPTRHI
@@ -217,7 +224,7 @@ _L1116
         lda     #$20
         ldx     #$00
         sec
-        jmp     L1488
+        jmp     jmp_draw_char1
 
 _L113A
         lda     #$10
@@ -270,7 +277,7 @@ _L1196
         lda     #$20
         ldx     #$00
         sec
-        jsr     L148B
+        jsr     jmp_draw_char2
         dey
         bpl     _L1196
         pla
@@ -350,10 +357,10 @@ GHOST_POINTS_ARR2
         .here
         .logical $1207
 screen_strides
-        .byte   1
+        .byte   1                   ;right
         .byte   $96                 ;-22 with sign-magnitude
         .byte   22
-        .byte   $81                 ;-1 with sign-magnitude
+        .byte   $81                 ;left, -1 with sign-magnitude
         .here
 L120B
         .byte   $0d
@@ -384,7 +391,7 @@ _negative_dir
         sta     SCREENPTRHI
 _join
         clc
-        jsr     L1488
+        jsr     jmp_draw_char1
         tax                         ;temporarily transfer accumulator to X so that stack operations can be done
         pla                         ;pop direction from stack and move it to Y
         tay
@@ -418,7 +425,7 @@ _L1265
         sta     ($8d),y
         dey
         bpl     _L1265
-        lda     $9114
+        lda     TIMER1LO
         and     #$03
         clc
         adc     L1BB4
@@ -458,7 +465,7 @@ _L12A0
         sta     SCREENPTRHI
 _L12B3
         clc
-        jsr     L1488
+        jsr     jmp_draw_char1
         cmp     #$1a
         bcs     _L12E5
         cmp     #$00
@@ -499,7 +506,7 @@ _L12E5
         lda     L1BB5
         ldx     L1BB6
         sec
-        jsr     L1488
+        jsr     jmp_draw_char1
         pla
         sta     L1BB1
         sta     SCREENPTRHI
@@ -513,7 +520,7 @@ _L12E5
         lda     #$0e
         ldx     L1BB3
         sec
-        jsr     L1488
+        jsr     jmp_draw_char1
 _L131F
         ldy     #$06
 _L1321
@@ -581,11 +588,11 @@ _L135C
         jsr     L16BA
         bit     L1BBE
         bpl     _L136F
-        jsr     _L145F
+        jsr     draw_ghost_points
         jmp     _L1372
 
 _L136F
-        jsr     _L144B
+        jsr     L144B
 _L1372
         jsr     jmp_get_input       ;get joystick input
         lda     #$00                ;then keyboard input
@@ -647,38 +654,38 @@ _L13E5
         jsr     L191C
         lda     $40
         cmp     #$05
-        bcc     _L1425
+        bcc     _space_occupied
         lda     #$00
         sta     $3f
         sta     $40
         lda     BONUS_SPOT
         cmp     #CHARCODE_EMPTY
-        bne     _L1425              ;if empty, spawn a bonus item maybe?
-        lda     #$a4
-        ldy     #$1e
+        bne     _space_occupied     ;if empty, spawn a bonus item maybe?
+        lda     #BONUS_SPOTLO
+        ldy     #BONUS_SPOTHI
         sta     SCREENPTRLO
         sty     SCREENPTRHI
-        lda     $9114
-        and     #$07
+        lda     TIMER1LO
+        and     #$07                ;get "random" value 0-7 from timer1
         pha
-        jsr     _L1440
-        lda     #$e7
-        ldy     #$1f
+        jsr     draw_bonus          ;draw bonus item in maze
+        lda     #HUD_BONUS_SPOTLO
+        ldy     #HUD_BONUS_SPOTHI
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         pla
         pha
-        jsr     _L1440
+        jsr     draw_bonus          ;draw bonus item on hud
         pla
-        inc     SCREENPTRLO
+        inc     SCREENPTRLO         ;move screen points a few characters to the right
         inc     SCREENPTRLO
         tay
-        lda     _L1438,y
-        jsr     L16C3
-_L1425
+        lda     BONUS_POINTS_ARR,y
+        jsr     jmp_draw_points
+_space_occupied
         jmp     L16B4
 
-_L1428
+L1428
         .byte   $12
         .byte   $14
         .byte   $13
@@ -687,7 +694,7 @@ _L1428
         .byte   $16
         .byte   $17
         .byte   $16
-_L1430
+L1430
         .byte   $06
         .byte   $02
         .byte   $07
@@ -696,24 +703,26 @@ _L1430
         .byte   $04
         .byte   $07
         .byte   $04
-_L1438
-        .byte   $20
-        .byte   $20
-        .byte   $05
-        .byte   $10
+        .logical $1438
+BONUS_POINTS_ARR
+        .byte   $20                 ;cherry points, 2000
+        .byte   $20                 ;tree points, 2000
+        .byte   $05                 ;flag points, 500
+        .byte   $10                 ;star points, 1000
+        .byte   $01                 ;music note points, 100
+        .byte   $02                 ;milk jug points, 200
         .byte   $01
-        .byte   $02
-        .byte   $01
-        .byte   $02
+        .byte   $02                 ;don't know which 20 and which 01/02 are which or why theres 2 two 01/02 yet
+        .here
 
-_L1440
+draw_bonus
         tay
-        lda     _L1428,y
-        ldx     _L1430,y
+        lda     L1428,y
+        ldx     L1430,y
         sec
-        jmp     L1488
+        jmp     jmp_draw_char1
 
-_L144B
+L144B
         lda     #$f1
         ldy     #$1f
         sta     SCREENPTRLO
@@ -722,25 +731,25 @@ _L1453
         ldx     #$00
         lda     #$20
         sec
-        jsr     L148B
+        jsr     jmp_draw_char2
         dey
         bpl     _L1453
         rts
 
-_L145F
-        lda     #$f1
-        ldy     #$1f
+draw_ghost_points
+        lda     #HUD_GHOST_SPOTLO   ;draws ghost icon + points on hud
+        ldy     #HUD_GHOST_SPOTHI
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         lda     #$0e
         ldx     #$01
         sec
-        jsr     L1488
+        jsr     jmp_draw_char1
         inc     SCREENPTRLO
         inc     SCREENPTRLO
         ldy     ghost_eat_streak
         lda     GHOST_POINTS_ARR,y  ;load points for next ghost for drawing to screen
-        jmp     L16C3
+        jmp     jmp_draw_points
 
         .logical $147c
 GHOST_POINTS_ARR
@@ -758,11 +767,11 @@ GHOST_POINTS_ARR
         .byte   $72
         .here
 
-L1488
-        jmp     L14AF
+jmp_draw_char1
+        jmp     draw_char1
 
-L148B
-        jmp     L14B1
+jmp_draw_char2
+        jmp     draw_char2
 
 L148E
         jmp     L14D8
@@ -795,9 +804,9 @@ L14A9
 
         jmp     L15CF
 
-L14AF
+draw_char1
         ldy     #$00
-L14B1
+draw_char2
         bcs     _L14C4
         lda     SCREENPTRHI
         pha
@@ -963,7 +972,7 @@ L15A2
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         clc
-        jsr     L1488
+        jsr     jmp_draw_char1
         cmp     #$11
         bne     _L15C4
         lda     L1BAB
@@ -989,7 +998,7 @@ L15CF
         ldx     #$07
 L15D1
         sec
-        jmp     L1488
+        jmp     jmp_draw_char1
 
 L15D5
         lda     L1BA9
@@ -1133,8 +1142,8 @@ L16BD
 L16C0
         jmp     L17A0
 
-L16C3
-        jmp     L17E7
+jmp_draw_points
+        jmp     draw_points
 
 jmp_snd_reset
         jmp     snd_reset
@@ -1160,7 +1169,7 @@ _L16E4
         cpy     #$04
         beq     _L16EF
         sec
-        jsr     L148B
+        jsr     jmp_draw_char2
         bcs     _L16E4
 _L16EF
         rts
@@ -1286,7 +1295,7 @@ _L17CD
         txa
         pha
         clc
-        jsr     L1488
+        jsr     jmp_draw_char1
         eor     #$01
         tay
         pla
@@ -1294,14 +1303,14 @@ _L17CD
         tya
 L17DD
         sec
-        jmp     L1488
+        jmp     jmp_draw_char1
 
 L17E1
         jsr     udtim
         jmp     $eb15
 
-L17E7
-        pha
+draw_points
+        pha                         ;draw ghost and bonus item points
         lsr     a
         lsr     a
         lsr     a
@@ -1326,9 +1335,9 @@ _L17FF
         jsr     L17DD
         inc     SCREENPTRLO
         lda     #$30
-        jsr     L1488
+        jsr     jmp_draw_char1
         inc     SCREENPTRLO
-        jmp     L1488
+        jmp     jmp_draw_char1
 
 snd_reset
         lda     #$00                ;sets all oscillator freqs to 0 and volume to 0
@@ -1445,7 +1454,7 @@ _L18CA
         ldx     L1B21,y
         lda     #$0e
         sec
-        jsr     L148B
+        jsr     jmp_draw_char2
         dey
         bpl     _L18CA
         lda     #$56                ;set irq handler to 1356
@@ -1518,7 +1527,7 @@ _skip_clamp
         dec     counter0
         bmi     _wrap_counter
         bit     L1BBE
-        bmi     L1963
+        bmi     play_powerup_sound
         ldy     counter0
         lda     SFX1,y
         sta     OSC3_FREQ
@@ -1562,31 +1571,31 @@ SFX2
         .byte   144
         .here
 
-L1963
+play_powerup_sound
         lda     L1BBD
         bne     _L196F
         lda     L1BBC
         cmp     #$40
-        bcc     _L1982
+        bcc     _power_end_tone
 _L196F
         lda     #FREQ_OFF
         sta     OSC1_FREQ
         lda     #MAX_VOL
         sta     VOLUME
         ldy     counter0
-        lda     SFX3,y
+        lda     SFX_POWERUP,y       ;play repeated falling sound when powerup is active
         sta     OSC3_FREQ
         rts
 
-_L1982
-        lda     #HALF_VOL
+_power_end_tone
+        lda     #HALF_VOL           ;play single tone at end of powerup time
         sta     VOLUME
         lda     #216
         sta     OSC3_FREQ
         rts
 
         .logical $198d
-SFX3
+SFX_POWERUP
         .byte   216                 ;sound effect played by OSC3 (high)
         .byte   217
         .byte   218
@@ -1691,7 +1700,7 @@ _L1A3F
         ldx     #$07
 _L1A41
         sec
-        jmp     L1488
+        jmp     jmp_draw_char1
 
         .byte   $31
         .fill   9,$11
