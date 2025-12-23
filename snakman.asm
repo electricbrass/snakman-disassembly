@@ -230,8 +230,8 @@ _L1116
         lda     L120B,y
         sty     L1BAB
         ldx     #COLOR_YELLOW
-        sec
-        jsr     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jsr     jmp_access_char
         lda     SCREENPTRLO
         sta     L1BA9
         lda     SCREENPTRHI
@@ -242,8 +242,8 @@ _L1116
         sta     SCREENPTRLO
         lda     #CHARCODE_EMPTY
         ldx     #COLOR_BLACK
-        sec
-        jmp     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jmp     jmp_access_char
 
 _L113A
         lda     #$10
@@ -295,8 +295,8 @@ _L1177
 _L1196
         lda     #CHARCODE_EMPTY
         ldx     #COLOR_BLACK
-        sec
-        jsr     jmp_draw_char2
+        sec                         ;access_char_with_offset(mode=write)
+        jsr     jmp_access_char_with_offset
         dey
         bpl     _L1196
         pla
@@ -409,8 +409,8 @@ _negative_dir
         sbc     #$00                ;subtract carry bit
         sta     SCREENPTRHI
 _join
-        clc
-        jsr     jmp_draw_char1
+        clc                         ;access_char(mode=read)
+        jsr     jmp_access_char
         tax                         ;temporarily transfer accumulator to X so that stack operations can be done
         pla                         ;pop direction from stack and move it to Y
         tay
@@ -483,8 +483,8 @@ _L12A0
         sbc     #$00
         sta     SCREENPTRHI
 _L12B3
-        clc
-        jsr     jmp_draw_char1
+        clc                         ;access_char(mode=read)
+        jsr     jmp_access_char
         cmp     #$1a
         bcs     _L12E5
         cmp     #$00
@@ -524,8 +524,8 @@ _L12E5
         sta     SCREENPTRHI
         lda     L1BB5
         ldx     L1BB6
-        sec
-        jsr     jmp_draw_char1
+        sec                         ;access_char(mode=read)
+        jsr     jmp_access_char
         pla
         sta     L1BB1
         sta     SCREENPTRHI
@@ -538,8 +538,8 @@ _L12E5
         sta     L1BB5
         lda     #CHARCODE_GHOST1
         ldx     L1BB3
-        sec
-        jsr     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jsr     jmp_access_char
 _move_blocked
         ldy     #$06
 _L1321
@@ -744,8 +744,8 @@ draw_bonus
         tay
         lda     BONUS_SPRITES_ARR,y
         ldx     BONUS_COLORS_ARR,y
-        sec
-        jmp     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jmp     jmp_access_char
 
 L144B
         lda     #$f1
@@ -755,8 +755,8 @@ L144B
 _L1453
         ldx     #COLOR_BLACK
         lda     #CHARCODE_EMPTY
-        sec
-        jsr     jmp_draw_char2
+        sec                         ;access_char_with_offset(mode=write)
+        jsr     jmp_access_char_with_offset
         dey
         bpl     _L1453
         rts
@@ -768,8 +768,8 @@ draw_ghost_points
         sty     SCREENPTRHI
         lda     #CHARCODE_GHOST1
         ldx     #COLOR_WHITE
-        sec
-        jsr     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jsr     jmp_access_char
         inc     SCREENPTRLO         ;move screen pointer a couple characters to the right for the number
         inc     SCREENPTRLO
         ldy     ghost_eat_streak
@@ -792,11 +792,11 @@ GHOST_POINTS_ARR
         .byte   $72
         .here
 
-jmp_draw_char1
-        jmp     draw_char1
+jmp_access_char
+        jmp     access_char
 
-jmp_draw_char2
-        jmp     draw_char2
+jmp_access_char_with_offset
+        jmp     access_char_with_offset
 
 L148E
         jmp     L14D8
@@ -829,10 +829,10 @@ L14A9
 
         jmp     L15CF
 
-draw_char1
+access_char
         ldy     #$00
-draw_char2
-        bcs     _L14C4
+access_char_with_offset
+        bcs     _write_mode
         lda     SCREENPTRHI
         pha
         adc     #$78
@@ -845,7 +845,7 @@ draw_char2
         clc
         rts
 
-_L14C4
+_write_mode
         sta     (SCREENPTRLO),y
         pha
         lda     SCREENPTRHI
@@ -996,8 +996,8 @@ L15A2
         ldy     L1BAA
         sta     SCREENPTRLO
         sty     SCREENPTRHI
-        clc
-        jsr     jmp_draw_char1
+        clc                         ;access_char(mode=read)
+        jsr     jmp_access_char
         cmp     #$11
         bne     _L15C4
         lda     L1BAB
@@ -1022,8 +1022,8 @@ _L15CD
 L15CF
         ldx     #COLOR_YELLOW
 L15D1
-        sec
-        jmp     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jmp     jmp_access_char
 
 L15D5
         lda     L1BA9
@@ -1193,8 +1193,8 @@ _L16E4
         iny
         cpy     #$04
         beq     _L16EF
-        sec
-        jsr     jmp_draw_char2
+        sec                         ;access_char_with_offset(mode=write)
+        jsr     jmp_access_char_with_offset
         bcs     _L16E4
 _L16EF
         rts
@@ -1319,16 +1319,16 @@ _L17CD
         sty     SCREENPTRHI
         txa
         pha
-        clc
-        jsr     jmp_draw_char1
+        clc                         ;access_char(mode=read)
+        jsr     jmp_access_char
         eor     #$01
         tay
         pla
         tax
         tya
 L17DD
-        sec
-        jmp     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jmp     jmp_access_char
 
 L17E1
         jsr     udtim
@@ -1360,9 +1360,9 @@ _L17FF
         jsr     L17DD
         inc     SCREENPTRLO
         lda     #CHARCODE_NUM0      ;draw 2 trailing 0s
-        jsr     jmp_draw_char1
+        jsr     jmp_access_char     ;access_char(mode=???)
         inc     SCREENPTRLO
-        jmp     jmp_draw_char1
+        jmp     jmp_access_char     ;access_char(mode=???)
 
 snd_reset
         lda     #$00                ;sets all oscillator freqs to 0 and volume to 0
@@ -1478,8 +1478,8 @@ _L18A6
 _loop1
         ldx     GHOST_COLORS_ARR,y
         lda     #CHARCODE_GHOST1
-        sec
-        jsr     jmp_draw_char2
+        sec                         ;access_char_with_offset(mode=write)
+        jsr     jmp_access_char_with_offset
         dey
         bpl     _loop1
         lda     #$56                ;set irq handler to 1356
@@ -1690,8 +1690,8 @@ _L1A02
         lda     $a2
         cmp     #$0e
         bcc     _L1A02
-        lda     #$20
-        ldx     #$00
+        lda     #CHARCODE_EMPTY
+        ldx     #COLOR_BLACK
         jsr     _L1A41
 _L1A0F
         dec     VOLUME
@@ -1726,8 +1726,8 @@ _L1A2F
 _L1A3F
         ldx     #COLOR_YELLOW
 _L1A41
-        sec
-        jmp     jmp_draw_char1
+        sec                         ;access_char(mode=write)
+        jmp     jmp_access_char
 
         .byte   $31
         .byte   $11
