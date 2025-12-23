@@ -6,6 +6,7 @@ HALF_VOL =      $08
 MAX_VOL =       $0f
 JOYBIT_FIRE =   $20
 INTERLACE_BIT = $80
+JOYBIT_RIGHT =  $80
 KEYCODE_F1 =    $85
 
 counter0 =      $00
@@ -24,8 +25,10 @@ OSC1_FREQ =     $900a               ;oscillator 1 frequency register (on:128-255
 OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255)
 NOISE_FREQ =    $900d               ;noise source frequency
 VOLUME  =       $900e               ;volume register (bits 4-7 also control some color stuff that isn't used in this)
-PORTAOUT =      $9111               ;port A output register
-V1_INTENABLE =  $911e               ;via 1 interrupt enable register
+VIA1_PORTAOUT = $9111               ;port A output register
+VIA1_INTENABLE = $911e              ;via 1 interrupt enable register
+VIA2_PORTBOUT = $9120
+VIA2_DATADIRECTION = $9122
 scnkey  =       $ff9f               ;Scan Keyboard ($ea87)
 ichrout =       $ffd2               ;Output Vector chrout $f1ca ($0326->$f1ca)
 udtim   =       $ffea               ;Increment Real-Time Clock ($f69b)
@@ -44,12 +47,12 @@ udtim   =       $ffea               ;Increment Real-Time Clock ($f69b)
 main
         sei
         lda     #$7f
-        sta     V1_INTENABLE        ;poke 0x7F to VIA 1 interrupt enable register (what does this do?)
+        sta     VIA1_INTENABLE      ;poke 0x7F to VIA 1 interrupt enable register (what does this do?)
         jsr     init
         jsr     L1491
         lda     #$ff
         sta     $9005               ;set start of character memory to 0x1C00 and dont modify screen memory location
-        lda     PORTAOUT            ;check if fire held, if so, enable interlace mode
+        lda     VIA1_PORTAOUT       ;check if fire held, if so, enable interlace mode
         eor     #$ff
         and     #JOYBIT_FIRE
         beq     _no_interlace
@@ -127,7 +130,7 @@ _L10A1
 wait_for_start
         jsr     jmp_snd_reset       ;reset all sounds
 _loop
-        lda     PORTAOUT            ;check that fire button is pressed
+        lda     VIA1_PORTAOUT       ;check that fire button is pressed
         eor     #$ff                ;flip bits
         and     #JOYBIT_FIRE        ;check bit
         bne     _break              ;return if pressed
@@ -723,18 +726,24 @@ _L145F
         inc     ROBUF
         inc     ROBUF
         ldy     L1BC2
-        lda     _L147C,y
+        lda     GHOST_POINTS_ARR,y
         jmp     L16C3
 
-_L147C
-        .byte   $01
+        .logical $147c
+GHOST_POINTS_ARR
+        .byte   $01                 ;consecutive ghost point values in BCD
         .byte   $02
         .byte   $04
         .byte   $08
         .byte   $16
-        .text   "$2@hv"
+        .byte   $24
+        .byte   $32
+        .byte   $40
+        .byte   $48
+        .byte   $56
         .byte   $64
         .byte   $72
+        .here
 
 L1488
         jmp     L14AF
@@ -898,17 +907,17 @@ _L155B
 
 get_input
         lda     #$00
-        sta     $9122
-        lda     $9120
-        eor     #$ff
-        and     #$80
-        rol     a
+        sta     VIA2_DATADIRECTION  ;set VIA2 port B data direction to input
+        lda     VIA2_PORTBOUT       ;check if joystick right pressed
+        eor     #$ff                ;(*0x9122 ^ 0xFF) & 0x80 -- flip bits with XOR cause active low
+        and     #JOYBIT_RIGHT
+        rol     a                   ;move joy right bit to carry flag
         php
         lda     #$ff
-        sta     $9122
-        lda     PORTAOUT
+        sta     VIA2_DATADIRECTION  ;set VIA2 port B data direction to input
+        lda     VIA1_PORTAOUT       ;check other joystick directions
         eor     #$ff
-        and     #$1c
+        and     #$1c                ;((*0x9111 ^ 0xFF) & 0b00011100) >> 2
         lsr     a
         lsr     a
         plp
@@ -2143,7 +2152,7 @@ L1BC2
         .byte   %00000000
         .here
         .logical $1c2f
-        .byte   %00001000           ;weird tree-like sprite
+        .byte   %00001000           ;bonus item sprite - christmas tree
         .byte   %00011000
         .byte   %00111100
         .byte   %00111100
@@ -2153,7 +2162,7 @@ L1BC2
         .byte   %00011000
         .here
         .logical $1c37
-        .byte   %00000110           ;unknown sprite
+        .byte   %00000110           ;bonus item sprite - flag
         .byte   %10001110
         .byte   %01111110
         .byte   %00111110
@@ -2163,7 +2172,7 @@ L1BC2
         .byte   %00000111
         .here
         .logical $1c3f
-        .byte   %11100000
+        .byte   %11100000           ;bonus item sprite - cherries
         .byte   %01011000
         .byte   %01000100
         .byte   %00100010
@@ -2173,7 +2182,7 @@ L1BC2
         .byte   %00100010
         .here
         .logical $1c47
-        .byte   %00001000
+        .byte   %00001000           ;bonus item sprite - star
         .byte   %00011100
         .byte   %11111111
         .byte   %01111110
@@ -2183,7 +2192,7 @@ L1BC2
         .byte   %01000001
         .here
         .logical $1c4f
-        .byte   %00000000
+        .byte   %00000000           ;bonus item sprite - milk can??
         .byte   %00011000
         .byte   %00111111
         .byte   %01111101
@@ -2193,7 +2202,7 @@ L1BC2
         .byte   %01111110
         .here
         .logical $1c57
-        .byte   %00001111
+        .byte   %00001111           ;bonus item sprite - music note
         .byte   %00001000
         .byte   %00001111
         .byte   %00001000
