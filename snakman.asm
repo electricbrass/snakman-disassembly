@@ -4,6 +4,7 @@
 LOW_VOL =       $05
 HALF_VOL =      $08
 MAX_VOL =       $0f
+CHARCODE_EMPTY = $20
 JOYBIT_FIRE =   $20
 KEYCODE_E =     $45
 KEYCODE_J =     $4a
@@ -24,6 +25,7 @@ KEYD    =       $0277               ;Keyboard Buffer Queue (FIFO)
 TODSNS  =       $02a2               ;TOD sense during Tape I/O
 CINV    =       $0314               ;Vector: Hardware IRQ Interrupt ($ea31)
 VICSCN  =       $0400               ;start of Default Screen Video Matrix
+BONUS_SPOT =    $1ea4               ;location on screen when bonus items spawn
 OSC1_FREQ =     $900a               ;oscillator 1 frequency register (on:128-255)
 OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255)
 NOISE_FREQ =    $900d               ;noise source frequency
@@ -283,11 +285,11 @@ _L11AC
         bpl     _L11C9
         lda     #$ff
         sta     L1BC1
-        inc     L1BC2
-        ldx     L1BC2
+        inc     ghost_eat_streak
+        ldx     ghost_eat_streak
         dex
-        lda     _L11FB,x
-        tax
+        lda     GHOST_POINTS_ARR2,x
+        tax                         ;load points for just eaten ghost into X
         lda     #$00
         jsr     _L11D1
         jmp     _L1116
@@ -330,20 +332,28 @@ _L11F5
         .byte   $10
         .byte   $02
         .byte   $01
-_L11FB
-        .byte   $01
+        .logical $11fb
+GHOST_POINTS_ARR2
+        .byte   $01                 ;seems like an identical table to GHOST_POINTS_ARR
         .byte   $02
         .byte   $04
         .byte   $08
         .byte   $16
-        .text   "$2@hv"
+        .byte   $24
+        .byte   $32
+        .byte   $40
+        .byte   $48
+        .byte   $56
         .byte   $64
         .byte   $72
+        .here
+        .logical $1207
 screen_strides
         .byte   1
         .byte   $96                 ;-22 with sign-magnitude
         .byte   22
         .byte   $81                 ;-1 with sign-magnitude
+        .here
 L120B
         .byte   $0d
         .byte   $19
@@ -640,9 +650,9 @@ _L13E5
         lda     #$00
         sta     $3f
         sta     $40
-        lda     L1EA4
-        cmp     #$20
-        bne     _L1425
+        lda     BONUS_SPOT
+        cmp     #CHARCODE_EMPTY
+        bne     _L1425              ;if empty, spawn a bonus item maybe?
         lda     #$a4
         ldy     #$1e
         sta     SCREENPTRLO
@@ -727,8 +737,8 @@ _L145F
         jsr     L1488
         inc     SCREENPTRLO
         inc     SCREENPTRLO
-        ldy     L1BC2
-        lda     GHOST_POINTS_ARR,y
+        ldy     ghost_eat_streak
+        lda     GHOST_POINTS_ARR,y  ;load points for next ghost for drawing to screen
         jmp     L16C3
 
         .logical $147c
@@ -1162,7 +1172,7 @@ L16F0
         lda     #$00
         sta     L1BBC
         sta     L1BBD
-        sta     L1BC2
+        sta     ghost_eat_streak    ;reset ghost eating streak to 0
         sta     L1BBE
         lda     #$03
         sta     L1B90
@@ -1923,7 +1933,7 @@ L1B8B
 L1B8C
         bpl     loop1
 loop2
-        cmp     #$20
+        cmp     #CHARCODE_EMPTY
 L1B90
         beq     return
         bne     loop2
@@ -2015,7 +2025,7 @@ L1BBF
         .byte   %00000000
 L1BC1
         .byte   %11111100
-L1BC2
+ghost_eat_streak
         .byte   %11111100
         .byte   %11111100
         .byte   %11111100
@@ -2686,8 +2696,6 @@ L1BC2
         .byte   $20
         .byte   $20
 SCREENMEMLO
-        .fill   164,$20
-L1EA4
-        .fill   92,$20
+        .fill   256,$20             ;clear screen on program load
 SCREENMEMHI
         .fill   256,$20
