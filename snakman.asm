@@ -1,6 +1,7 @@
 ; Target assembler: 64tass v1.59.3120 [--ascii --case-sensitive -Wall]
 ; 6502bench SourceGen v1.10.0
         .cpu    "6502"
+FREQ_OFF =      0                   ;setting oscillator freq to this value turns the oscillator off
 LOW_VOL =       $05
 HALF_VOL =      $08
 MAX_VOL =       $0f
@@ -14,7 +15,7 @@ INTERLACE_BIT = $80
 JOYBIT_RIGHT =  $80
 KEYCODE_F1 =    $85
 
-counter0 =      $00
+counter0 =      $00                 ;maybe a timer for sound effects?
 INBIT   =       $a7                 ;RS232 temporary for received Bit/Tape
 NDX     =       $c6                 ;Number of Characters in Keyboard Buffer queue
 RIBUF   =       $f7                 ;RS232 Input Buffer Pointer
@@ -1330,12 +1331,12 @@ _L17FF
         jmp     L1488
 
 snd_reset
-        lda     #$00
+        lda     #$00                ;sets all oscillator freqs to 0 and volume to 0
         ldy     #$04
-_L1819
+_loop
         sta     OSC1_FREQ,y
         dey
-        bpl     _L1819
+        bpl     _loop
         rts
 
 L1820
@@ -1509,17 +1510,17 @@ _L18FF
 L191C
         lda     counter0
         cmp     #$0c
-        bcc     _L1926
-_L1922
+        bcc     _skip_clamp
+_wrap_counter
         lda     #$0b
         sta     counter0
-_L1926
+_skip_clamp
         dec     counter0
-        bmi     _L1922
+        bmi     _wrap_counter
         bit     L1BBE
-        bmi     _L1963
+        bmi     L1963
         ldy     counter0
-        lda     _L194F,y
+        lda     SFX1,y
         sta     OSC3_FREQ
         lda     #LOW_VOL
         sta     VOLUME
@@ -1529,47 +1530,51 @@ _L1926
         dec     $01
         lda     #MAX_VOL
         sta     VOLUME
-        lda     _L195B,y
+        lda     SFX2,y
 _L194B
         sta     OSC1_FREQ
         rts
 
-_L194F
-        .byte   $d8
-        .byte   $da
-        .byte   $dc
-        .byte   $de
-        .byte   $e0
-        .byte   $e2
-        .byte   $e1
-        .byte   $df
-        .byte   $dd
-        .byte   $db
-        .byte   $d9
-        .byte   $d7
-_L195B
-        .byte   $00
-        .byte   $90
-        .byte   $92
-        .byte   $94
-        .byte   $96
-        .byte   $94
-        .byte   $92
-        .byte   $90
+        .logical $194f
+SFX1
+        .byte   216                 ;sound effect played by OSC3 (high)
+        .byte   218
+        .byte   220
+        .byte   222
+        .byte   224
+        .byte   226
+        .byte   225
+        .byte   223
+        .byte   221
+        .byte   219
+        .byte   217
+        .byte   215
+        .here
+        .logical $195b
+SFX2
+        .byte   FREQ_OFF            ;sound effect played by OSC1 (low)
+        .byte   144
+        .byte   146
+        .byte   148
+        .byte   150
+        .byte   148
+        .byte   146
+        .byte   144
+        .here
 
-_L1963
+L1963
         lda     L1BBD
         bne     _L196F
         lda     L1BBC
         cmp     #$40
         bcc     _L1982
 _L196F
-        lda     #0
+        lda     #FREQ_OFF
         sta     OSC1_FREQ
         lda     #MAX_VOL
         sta     VOLUME
         ldy     counter0
-        lda     _L198D,y
+        lda     SFX3,y
         sta     OSC3_FREQ
         rts
 
@@ -1580,19 +1585,21 @@ _L1982
         sta     OSC3_FREQ
         rts
 
-_L198D
-        .byte   $d8
-        .byte   $d9
-        .byte   $da
-        .byte   $db
-        .byte   $dc
-        .byte   $dd
-        .byte   $de
-        .byte   $df
-        .byte   $e0
-        .byte   $e1
-        .byte   $e2
-        .byte   $e3
+        .logical $198d
+SFX3
+        .byte   216                 ;sound effect played by OSC3 (high)
+        .byte   217
+        .byte   218
+        .byte   219
+        .byte   220
+        .byte   221
+        .byte   222
+        .byte   223
+        .byte   224
+        .byte   225
+        .byte   226
+        .byte   227
+        .here
 
 L1999
         jsr     L16C0
@@ -1609,7 +1616,7 @@ _L19AD
         bne     _L19AD
         lda     #$00
         sta     $a2
-        dec     OSC3_FREQ
+        dec     OSC3_FREQ           ;i think this might be the falling tone that plays when dying?
         lda     OSC3_FREQ
         cmp     #$a5
         bne     _L19AD
