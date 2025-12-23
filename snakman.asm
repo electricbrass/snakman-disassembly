@@ -17,7 +17,8 @@ counter0 =      $00
 INBIT   =       $a7                 ;RS232 temporary for received Bit/Tape
 NDX     =       $c6                 ;Number of Characters in Keyboard Buffer queue
 RIBUF   =       $f7                 ;RS232 Input Buffer Pointer
-ROBUF   =       $f9                 ;RS232 Output Buffer Pointer
+SCREENPTRLO =   $f9                 ;might be a pointer into screen memory, or it might be a pointer to some other place the maze and positions are stored
+SCREENPTRHI =   $fa
 FREKZP  =       $fb                 ;Free Zero Page space for User Programs
 KEYD    =       $0277               ;Keyboard Buffer Queue (FIFO)
 TODSNS  =       $02a2               ;TOD sense during Tape I/O
@@ -161,21 +162,21 @@ _no_input
 
 L10D8
         lda     L1BA9
-        sta     ROBUF
+        sta     SCREENPTRLO
         pha
         lda     L1BAA
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         pha
         ldy     input_direction
         jsr     handle_input
         cmp     #$0b
         bcs     _L1105
         pla
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         pla
-        sta     ROBUF
+        sta     SCREENPTRLO
         pha
-        lda     ROBUF+1
+        lda     SCREENPTRHI
         pha
         ldy     L1BAB
         jsr     handle_input
@@ -202,14 +203,14 @@ _L1116
         ldx     #$07
         sec
         jsr     L1488
-        lda     ROBUF
+        lda     SCREENPTRLO
         sta     L1BA9
-        lda     ROBUF+1
+        lda     SCREENPTRHI
         sta     L1BAA
         pla
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         pla
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     #$20
         ldx     #$00
         sec
@@ -253,14 +254,14 @@ _L1177
         jsr     _L11D1
         tya
         pha
-        lda     ROBUF
+        lda     SCREENPTRLO
         pha
-        lda     ROBUF+1
+        lda     SCREENPTRHI
         pha
         lda     #$e7
         ldy     #$1f
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         ldy     #$05
 _L1196
         lda     #$20
@@ -270,9 +271,9 @@ _L1196
         dey
         bpl     _L1196
         pla
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         pla
-        sta     ROBUF
+        sta     SCREENPTRLO
         pla
         tay
         jmp     _L1116
@@ -303,9 +304,9 @@ _L11D1
         stx     L1B8B
         tya
         pha
-        lda     ROBUF
+        lda     SCREENPTRLO
         pha
-        lda     ROBUF+1
+        lda     SCREENPTRHI
         pha
         jsr     L148E
         lda     #$00
@@ -315,9 +316,9 @@ _L11E6
         dey
         bpl     _L11E6
         pla
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         pla
-        sta     ROBUF
+        sta     SCREENPTRLO
         pla
         tay
         rts
@@ -338,11 +339,11 @@ _L11FB
         .text   "$2@hv"
         .byte   $64
         .byte   $72
-L1207
-        .byte   $01
-        .byte   $96
-        .byte   $16
-        .byte   $81
+screen_strides
+        .byte   1
+        .byte   $96                 ;-22 with sign-magnitude
+        .byte   22
+        .byte   $81                 ;-1 with sign-magnitude
 L120B
         .byte   $0d
         .byte   $19
@@ -352,25 +353,25 @@ L120B
 handle_input
         tya
         pha                         ;push direction to stack for later use
-        lda     L1207,y
-        bmi     _L1221
+        lda     screen_strides,y
+        bmi     _negative_dir       ;branch if moving in negative direction along either axis
         clc
-        adc     ROBUF
-        sta     ROBUF
-        bcc     _L1232
-        inc     ROBUF+1
-        bne     _L1232
-_L1221
-        and     #$7f
+        adc     SCREENPTRLO         ;increment screenptr to next cell
+        sta     SCREENPTRLO
+        bcc     _join
+        inc     SCREENPTRHI         ;16-bit add, need to increment the high byte too if there was a carry
+        bne     _join
+_negative_dir
+        and     #$7f                ;clear sign bit to extract magnitude
         sta     $8f
         sec
-        lda     ROBUF
+        lda     SCREENPTRLO         ;decrement screenptr to next cell
         sbc     $8f
-        sta     ROBUF
-        lda     ROBUF+1
-        sbc     #$00
-        sta     ROBUF+1
-_L1232
+        sta     SCREENPTRLO
+        lda     SCREENPTRHI
+        sbc     #$00                ;subtract carry bit
+        sta     SCREENPTRHI
+_join
         clc
         jsr     L1488
         tax                         ;temporarily transfer accumulator to X so that stack operations can be done
@@ -429,10 +430,10 @@ _L128F
         bmi     _L12A0
         clc
         adc     L1BB0
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     #$00
         adc     L1BB1
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         bne     _L12B3
 _L12A0
         and     #$7f
@@ -440,10 +441,10 @@ _L12A0
         sec
         lda     L1BB0
         sbc     INBIT
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     L1BB1
         sbc     #$00
-        sta     ROBUF+1
+        sta     SCREENPTRHI
 _L12B3
         clc
         jsr     L1488
@@ -476,24 +477,24 @@ _L12E5
         pha
         txa
         pha
-        lda     ROBUF
+        lda     SCREENPTRLO
         pha
-        lda     ROBUF+1
+        lda     SCREENPTRHI
         pha
         lda     L1BB0
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     L1BB1
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         lda     L1BB5
         ldx     L1BB6
         sec
         jsr     L1488
         pla
         sta     L1BB1
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         pla
         sta     L1BB0
-        sta     ROBUF
+        sta     SCREENPTRLO
         pla
         sta     L1BB6
         pla
@@ -644,22 +645,22 @@ _L13E5
         bne     _L1425
         lda     #$a4
         ldy     #$1e
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         lda     $9114
         and     #$07
         pha
         jsr     _L1440
         lda     #$e7
         ldy     #$1f
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         pla
         pha
         jsr     _L1440
         pla
-        inc     ROBUF
-        inc     ROBUF
+        inc     SCREENPTRLO
+        inc     SCREENPTRLO
         tay
         lda     _L1438,y
         jsr     L16C3
@@ -704,8 +705,8 @@ _L1440
 _L144B
         lda     #$f1
         ldy     #$1f
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
 _L1453
         ldx     #$00
         lda     #$20
@@ -718,14 +719,14 @@ _L1453
 _L145F
         lda     #$f1
         ldy     #$1f
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         lda     #$0e
         ldx     #$01
         sec
         jsr     L1488
-        inc     ROBUF
-        inc     ROBUF
+        inc     SCREENPTRLO
+        inc     SCREENPTRLO
         ldy     L1BC2
         lda     GHOST_POINTS_ARR,y
         jmp     L16C3
@@ -787,30 +788,30 @@ L14AF
         ldy     #$00
 L14B1
         bcs     _L14C4
-        lda     ROBUF+1
+        lda     SCREENPTRHI
         pha
         adc     #$78
-        sta     ROBUF+1
-        lda     (ROBUF),y
+        sta     SCREENPTRHI
+        lda     (SCREENPTRLO),y
         tax
         pla
-        sta     ROBUF+1
-        lda     (ROBUF),y
+        sta     SCREENPTRHI
+        lda     (SCREENPTRLO),y
         clc
         rts
 
 _L14C4
-        sta     (ROBUF),y
+        sta     (SCREENPTRLO),y
         pha
-        lda     ROBUF+1
+        lda     SCREENPTRHI
         pha
         clc
         adc     #$78
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         txa
-        sta     (ROBUF),y
+        sta     (SCREENPTRLO),y
         pla
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         sec
         pla
         rts
@@ -828,18 +829,18 @@ _L14DD
         bpl     _L14DD
         cld
         lda     #$0b
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     #$1e
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         lda     #$80
         sta     FREKZP
         lda     #$1b
         sta     $fc
         jsr     _L150D
         lda     #$21
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     #$1e
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         lda     #$84
         sta     FREKZP
         lda     #$1b
@@ -879,7 +880,7 @@ _L1539
         ldx     #$07
         ora     #$30
         jsr     L15D1
-        inc     ROBUF
+        inc     SCREENPTRLO
         rts
 
 L1543
@@ -948,8 +949,8 @@ _end_input
 L15A2
         lda     L1BA9
         ldy     L1BAA
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         clc
         jsr     L1488
         cmp     #$11
@@ -983,8 +984,8 @@ L15D5
         lda     L1BA9
         ldy     L1BAA
 L15DB
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         lda     #$b4
         ldy     #$16
         sta     CINV                ;set irq handler to $16b4
@@ -1029,8 +1030,8 @@ L1622
 L162D
         lda     #$c2
         ldy     #$1f
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         sta     L1BA9
         sty     L1BAA
         lda     #$01
@@ -1053,10 +1054,10 @@ _L1653
         sta     $8d
         ldy     #$00
         lda     ($8d),y
-        sta     ROBUF
+        sta     SCREENPTRLO
         iny
         lda     ($8d),y
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         ldy     #$06
         lda     ($8d),y
         tax
@@ -1087,10 +1088,10 @@ _L1653
         sta     ($8d),y
         ldy     #$00
         lda     ($8d),y
-        sta     ROBUF
+        sta     SCREENPTRLO
         iny
         lda     ($8d),y
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         iny
         lda     ($8d),y
         tax
@@ -1137,9 +1138,9 @@ L16CF
         jsr     L1497
         jsr     L16CC
         lda     #$d7
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     #$1e
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         ldy     loop1+2
         lda     #$20
         ldx     #$00
@@ -1212,11 +1213,11 @@ _L1758
         sty     $8e
         ldy     #$00
         lda     #$fb
-        sta     ROBUF
+        sta     SCREENPTRLO
         sta     ($8d),y
         iny
         lda     #$1e
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         sta     ($8d),y
         iny
         iny
@@ -1269,8 +1270,8 @@ L17A0
         ldy     L1BA3
         ldx     L1BA5
 _L17CD
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         txa
         pha
         clc
@@ -1299,7 +1300,7 @@ L17E7
         ldx     #$00
 _L17F2
         jsr     L17DD
-        inc     ROBUF
+        inc     SCREENPTRLO
         bne     _L17FF
 _L17F9
         ora     #$30
@@ -1312,10 +1313,10 @@ _L17FF
         ora     #$30
         ldx     #$07
         jsr     L17DD
-        inc     ROBUF
+        inc     SCREENPTRLO
         lda     #$30
         jsr     L1488
-        inc     ROBUF
+        inc     SCREENPTRLO
         jmp     L1488
 
 snd_reset
@@ -1331,23 +1332,23 @@ L1820
         clc
         lda     #$9f
         adc     #$57
-        sta     ROBUF
+        sta     SCREENPTRLO
         lda     #$1b
         adc     #$01
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         lda     #$57
         sta     RIBUF
         lda     #$1d
         sta     RIBUF+1
         ldy     #$00
 _L1837
-        lda     (ROBUF),y
+        lda     (SCREENPTRLO),y
         sta     (RIBUF),y
-        lda     ROBUF
+        lda     SCREENPTRLO
         bne     _L1841
-        dec     ROBUF+1
+        dec     SCREENPTRHI
 _L1841
-        dec     ROBUF
+        dec     SCREENPTRLO
         lda     RIBUF
         bne     _L1849
         dec     RIBUF+1
@@ -1359,13 +1360,13 @@ _L1849
         lda     #$00
         ldy     #$1d
         sta     RIBUF
-        sta     ROBUF
+        sta     SCREENPTRLO
         sty     RIBUF+1
         lda     #$81
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         ldy     #$ff
 _L1861
-        lda     (ROBUF),y
+        lda     (SCREENPTRLO),y
         sta     (RIBUF),y
         dey
         cpy     #$57
@@ -1395,8 +1396,8 @@ _L1889
         sty     RIBUF+1
         lda     #$2b
         ldy     #$1e
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         ldx     #$00
         txa
         pha
@@ -1425,9 +1426,9 @@ _L18A6
         bne     _L18A0
         pla
         lda     #$1e
-        sta     ROBUF+1
+        sta     SCREENPTRHI
         lda     #$fb
-        sta     ROBUF
+        sta     SCREENPTRLO
         ldy     #$03
 _L18CA
         ldx     L1B21,y
@@ -1443,9 +1444,9 @@ _L18CA
         rts
 
 _L18E1
-        inc     ROBUF
+        inc     SCREENPTRLO
         bne     _L18E7
-        inc     ROBUF+1
+        inc     SCREENPTRHI
 _L18E7
         cmp     #$0b
         bcc     _L18F4
@@ -1613,8 +1614,8 @@ _L19AD
         sta     $a2
         lda     L1BA9
         ldy     L1BAA
-        sta     ROBUF
-        sty     ROBUF+1
+        sta     SCREENPTRLO
+        sty     SCREENPTRHI
         lda     #$1a
         jsr     _L1A3F
         cli
@@ -2232,7 +2233,7 @@ L1BC2
         .byte   %00000000
         .here
         .logical $1c6f
-        .byte   %11000011           ;snakman death frame x
+        .byte   %11000011           ;snakman death frame 1
         .byte   %11100111
         .byte   %01111110
         .byte   %00111100
@@ -2242,7 +2243,7 @@ L1BC2
         .byte   %11000011
         .here
         .logical $1c77
-        .byte   %10001001
+        .byte   %10001001           ;snakman death frame 2
         .byte   %01001010
         .byte   %00101100
         .byte   %11111111
@@ -2252,7 +2253,7 @@ L1BC2
         .byte   %10010001
         .here
         .logical $1c7f
-        .byte   %00000000
+        .byte   %00000000           ;snakman death frame 3
         .byte   %01000000
         .byte   %00000000
         .byte   %00000010
