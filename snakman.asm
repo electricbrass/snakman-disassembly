@@ -5,13 +5,16 @@ LOW_VOL =       $05
 HALF_VOL =      $08
 MAX_VOL =       $0f
 JOYBIT_FIRE =   $20
+KEYCODE_E =     $45
+KEYCODE_J =     $4a
+KEYCODE_L =     $4c
+KEYCODE_V =     $56
 INTERLACE_BIT = $80
 JOYBIT_RIGHT =  $80
 KEYCODE_F1 =    $85
 
 counter0 =      $00
 INBIT   =       $a7                 ;RS232 temporary for received Bit/Tape
-RINONE  =       $a9                 ;RS232 Flag: Start Bit check/Tape temporary
 NDX     =       $c6                 ;Number of Characters in Keyboard Buffer queue
 RIBUF   =       $f7                 ;RS232 Input Buffer Pointer
 ROBUF   =       $f9                 ;RS232 Output Buffer Pointer
@@ -19,7 +22,6 @@ FREKZP  =       $fb                 ;Free Zero Page space for User Programs
 KEYD    =       $0277               ;Keyboard Buffer Queue (FIFO)
 TODSNS  =       $02a2               ;TOD sense during Tape I/O
 CINV    =       $0314               ;Vector: Hardware IRQ Interrupt ($ea31)
-TBUFFR  =       $033c               ;start of Tape I/O Buffer
 VICSCN  =       $0400               ;start of Default Screen Video Matrix
 OSC1_FREQ =     $900a               ;oscillator 1 frequency register (on:128-255)
 OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255)
@@ -144,16 +146,16 @@ _break
 
 key_input
         lda     NDX
-        beq     _no_input
-        ldy     KEYD
+        beq     _no_input           ;jump to return if there was no input
+        ldy     KEYD                ;load first character of input buffer into Y
         ldx     #$00
 _shift
-        lda     KEYD+1,x
+        lda     KEYD+1,x            ;shift the rest of the buffer forward
         sta     KEYD,x
         inx
         cpx     NDX
         bne     _shift
-        tya
+        tya                         ;transfer character read into A for return
 _no_input
         rts
 
@@ -164,8 +166,8 @@ L10D8
         lda     L1BAA
         sta     ROBUF+1
         pha
-        ldy     L1BB8
-        jsr     L120F
+        ldy     input_direction
+        jsr     handle_input
         cmp     #$0b
         bcs     _L1105
         pla
@@ -176,7 +178,7 @@ L10D8
         lda     ROBUF+1
         pha
         ldy     L1BAB
-        jsr     L120F
+        jsr     handle_input
         cmp     #$0b
         bcs     _L1105
         pla
@@ -184,17 +186,17 @@ L10D8
         rts
 
 _L1105
-        beq     L113A
+        beq     _L113A
         cmp     #$0c
-        beq     L1150
+        beq     _L1150
         cmp     #$10
         bcs     _L1112
-        jmp     L11AC
+        jmp     _L11AC
 
 _L1112
         cmp     #$18
-        bcc     L1177
-L1116
+        bcc     _L1177
+_L1116
         lda     L120B,y
         sty     L1BAB
         ldx     #$07
@@ -213,21 +215,21 @@ L1116
         sec
         jmp     L1488
 
-L113A
+_L113A
         lda     #$10
         ldx     #$00
-        jsr     L11D1
+        jsr     _L11D1
         lda     #$ff
         sta     L1BBF
         lda     #$06
         sta     $01
         dec     L1BBA
-        jmp     L1116
+        jmp     _L1116
 
-L1150
+_L1150
         lda     #$50
         ldx     #$00
-        jsr     L11D1
+        jsr     _L11D1
         lda     #$01
         sta     L1BBD
         lda     #$c0
@@ -239,16 +241,16 @@ L1150
         sta     L1BA5
         sta     L1B97
         sta     L1B9E
-        jmp     L1116
+        jmp     _L1116
 
-L1177
+_L1177
         sec
         sbc     #$12
         tax
-        lda     L11F5,x
+        lda     _L11F5,x
         tax
         lda     #$00
-        jsr     L11D1
+        jsr     _L11D1
         tya
         pha
         lda     ROBUF
@@ -273,10 +275,9 @@ _L1196
         sta     ROBUF
         pla
         tay
-L11A9
-        jmp     L1116
+        jmp     _L1116
 
-L11AC
+_L11AC
         bit     L1BBE
         bpl     _L11C9
         lda     #$ff
@@ -284,11 +285,11 @@ L11AC
         inc     L1BC2
         ldx     L1BC2
         dex
-        lda     L11FB,x
+        lda     _L11FB,x
         tax
         lda     #$00
-        jsr     L11D1
-        jmp     L1116
+        jsr     _L11D1
+        jmp     _L1116
 
 _L11C9
         lda     #$ff
@@ -297,7 +298,7 @@ _L11C9
         pla
         rts
 
-L11D1
+_L11D1
         sta     L1B8C
         stx     L1B8B
         tya
@@ -321,14 +322,14 @@ _L11E6
         tay
         rts
 
-L11F5
+_L11F5
         .byte   $20
         .byte   $05
         .byte   $20
         .byte   $10
         .byte   $02
         .byte   $01
-L11FB
+_L11FB
         .byte   $01
         .byte   $02
         .byte   $04
@@ -348,9 +349,9 @@ L120B
         .byte   $10
         .byte   $18
 
-L120F
+handle_input
         tya
-        pha
+        pha                         ;push direction to stack for later use
         lda     L1207,y
         bmi     _L1221
         clc
@@ -372,8 +373,8 @@ _L1221
 _L1232
         clc
         jsr     L1488
-        tax
-        pla
+        tax                         ;temporarily transfer accumulator to X so that stack operations can be done
+        pla                         ;pop direction from stack and move it to Y
         tay
         txa
         rts
@@ -574,31 +575,31 @@ _L135C
 _L136F
         jsr     _L144B
 _L1372
-        jsr     jmp_get_input
-        lda     #$00
-        sta     NDX
-        jsr     scnkey
+        jsr     jmp_get_input       ;get joystick input
+        lda     #$00                ;then keyboard input
+        sta     NDX                 ;clear input buffer
+        jsr     scnkey              ;read one keypress
         jsr     key_input
-        cmp     #$45
-        beq     _L1392
-        cmp     #$56
-        beq     _L1395
-        cmp     #$4a
-        beq     _L1398
-        cmp     #$4c
-        bne     _L139D
+        cmp     #KEYCODE_E
+        beq     _up
+        cmp     #KEYCODE_V
+        beq     _down
+        cmp     #KEYCODE_J
+        beq     _left
+        cmp     #KEYCODE_L
+        bne     _no_input
         lda     #$00
         .byte   $2c
-_L1392
+_up
         lda     #$01
         .byte   $2c
-_L1395
+_down
         lda     #$02
         .byte   $2c
-_L1398
+_left
         lda     #$03
-        sta     L1BB8
-_L139D
+        sta     input_direction     ;store direction as value 0-3 (0: right, 1: up, 2: down, 3: left)
+_no_input
         dec     L1BAC
         bpl     _L13AA
         lda     #$06
@@ -916,31 +917,31 @@ get_input
         lda     #$ff
         sta     VIA2_DATADIRECTION  ;set VIA2 port B data direction to input
         lda     VIA1_PORTAOUT       ;check other joystick directions
-        eor     #$ff
+        eor     #$ff                ;convert joystick input bits from bits 2-4 of VIA_PORTAOUT to bits 0-2 of A
         and     #$1c                ;((*0x9111 ^ 0xFF) & 0b00011100) >> 2
         lsr     a
         lsr     a
-        plp
-        rol     a
+        plp                         ;restore flags
+        rol     a                   ;and shift the input bits left by 1, putting the carry flag (joystick right) into bit 0
         cmp     #$01
-        beq     _L1596
+        beq     _right
         cmp     #$02
-        beq     _L1599
+        beq     _up
         cmp     #$04
-        beq     _L159C
+        beq     _down
         cmp     #$08
-        bne     _end_input
+        bne     _end_input          ;no direction was input
         lda     #$03
         .byte   $2c
-_L1596
+_right
         lda     #$00
         .byte   $2c
-_L1599
+_up
         lda     #$01
         .byte   $2c
-_L159C
+_down
         lda     #$02
-        sta     L1BB8
+        sta     input_direction     ;store direction as value 0-3 (0: right, 1: up, 2: down, 3: left)
 _end_input
         rts
 
@@ -1034,7 +1035,7 @@ L162D
         sty     L1BAA
         lda     #$01
         sta     L1BAB
-        sta     L1BB8
+        sta     input_direction     ;start game facing up
         lda     #$10
         bne     L15CF
 
@@ -1584,12 +1585,11 @@ _L198D
 
 L1999
         jsr     L16C0
-        jsr     L1A2F
+        jsr     _L1A2F
         jsr     jmp_snd_reset
         lda     #205
         sta     OSC3_FREQ
         lda     #MAX_VOL
-L19A9
         sta     VOLUME
         cli
 _L19AD
@@ -1616,21 +1616,21 @@ _L19AD
         sta     ROBUF
         sty     ROBUF+1
         lda     #$1a
-        jsr     L1A3F
+        jsr     _L1A3F
         cli
 _L19E6
         lda     $a2
         cmp     #$04
         bcc     _L19E6
         lda     #$1b
-        jsr     L1A3F
+        jsr     _L1A3F
         dec     VOLUME
 _L19F4
         lda     $a2
         cmp     #$09
         bcc     _L19F4
         lda     #$1c
-        jsr     L1A3F
+        jsr     _L1A3F
         dec     VOLUME
 _L1A02
         lda     $a2
@@ -1638,7 +1638,7 @@ _L1A02
         bcc     _L1A02
         lda     #$20
         ldx     #$00
-        jsr     L1A41
+        jsr     _L1A41
 _L1A0F
         dec     VOLUME
         beq     _L1A20
@@ -1659,7 +1659,7 @@ _L1A20
         sta     CINV
         rts
 
-L1A2F
+_L1A2F
         sei
         lda     #$b4                ;set irq handler to $16b4 and reset $a2 (whatever that is)
         ldy     #$16
@@ -1669,9 +1669,9 @@ L1A2F
         sta     $a2
         rts
 
-L1A3F
+_L1A3F
         ldx     #$07
-L1A41
+_L1A41
         sec
         jmp     L1488
 
@@ -1994,7 +1994,7 @@ L1BB6
         .here
         .logical $1bb7
         .byte   %00000000           ;top left corner tile
-L1BB8
+input_direction
         .byte   %00000000
         .byte   %00111111
 L1BBA
