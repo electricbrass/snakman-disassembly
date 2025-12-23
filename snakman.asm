@@ -47,11 +47,10 @@ SCREENPTR2LO =  $f7                 ;2nd pointer into screen memory used when co
 SCREENPTR2HI =  $f8
 SCREENPTRLO =   $f9                 ;pointer into screen memory
 SCREENPTRHI =   $fa
-FREKZP  =       $fb                 ;Free Zero Page space for User Programs
+UNKNOWNPTRLO =  $fb
+UNKNOWNPTRHI =  $fc
 KEYD    =       $0277               ;Keyboard Buffer Queue (FIFO)
-TODSNS  =       $02a2               ;TOD sense during Tape I/O
 CINV    =       $0314               ;Vector: Hardware IRQ Interrupt ($ea31)
-VICSCN  =       $0400               ;start of Default Screen Video Matrix
 BONUS_SPOT =    $1ea4               ;location on screen when bonus items spawn
 OSC1_FREQ =     $900a               ;oscillator 1 frequency register (on:128-255)
 OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255)
@@ -96,7 +95,7 @@ _no_interlace
         sec
         php
 L1032
-        jsr     L16CC
+        jsr     jmp_setup_screen
         jsr     L148E
         plp
         bcc     _L103E
@@ -278,7 +277,7 @@ _L1177
         sec
         sbc     #$12
         tax
-        lda     _L11F5,x
+        lda     BONUS_POINTS_ARR2,x
         tax
         lda     #$00
         jsr     _L11D1
@@ -288,8 +287,8 @@ _L1177
         pha
         lda     SCREENPTRHI
         pha
-        lda     #$e7
-        ldy     #$1f
+        lda     #HUD_BONUS_SPOTLO
+        ldy     #HUD_BONUS_SPOTHI
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         ldy     #$05
@@ -353,13 +352,13 @@ _L11E6
         tay
         rts
 
-_L11F5
-        .byte   $20
-        .byte   $05
-        .byte   $20
-        .byte   $10
-        .byte   $02
-        .byte   $01
+BONUS_POINTS_ARR2
+        .byte   $20                 ;cherry (or tree?) points, 2000 | seems like slightly different duplicate of BONUS_POINTS_ARR
+        .byte   $05                 ;flag points, 500
+        .byte   $20                 ;tree (or cherry?) points, 2000
+        .byte   $10                 ;star points, 1000
+        .byte   $02                 ;milk jug points, 200
+        .byte   $01                 ;music note points, 100
         .logical $11fb
 GHOST_POINTS_ARR2
         .byte   $01                 ;seems like an identical table to GHOST_POINTS_ARR
@@ -876,21 +875,21 @@ _L14DD
         cld
         lda     #$0b
         sta     SCREENPTRLO
-        lda     #$1e
+        lda     #$1e                ;1e0b is a character right of HIGH SCORE
         sta     SCREENPTRHI
         lda     #$80
-        sta     FREKZP
+        sta     UNKNOWNPTRLO
         lda     #$1b
-        sta     $fc
+        sta     UNKNOWNPTRHI
         jsr     _L150D
         lda     #$21
         sta     SCREENPTRLO
-        lda     #$1e
+        lda     #$1e                ;1e21 is a character right of SCORE
         sta     SCREENPTRHI
         lda     #$84
-        sta     FREKZP
+        sta     UNKNOWNPTRLO
         lda     #$1b
-        sta     $fc
+        sta     UNKNOWNPTRHI
 _L150D
         lda     #$00
         sta     $fd
@@ -899,7 +898,7 @@ _L1513
         ldy     $fe
         cpy     #$04
         beq     _L152D
-        lda     (FREKZP),y
+        lda     (UNKNOWNPTRLO),y
         pha
         lsr     a
         lsr     a
@@ -938,16 +937,16 @@ L1546
 L1549
         ldy     #$09
         lda     #$80
-        sta     FREKZP
+        sta     UNKNOWNPTRLO
         lda     #$1b
-        sta     $fc
+        sta     UNKNOWNPTRHI
         lda     #$25
         sta     $fd
         lda     #$1b
         sta     $fe
 _L155B
         lda     ($fd),y
-        sta     (FREKZP),y
+        sta     (UNKNOWNPTRLO),y
         iny
         cpy     #$50
         bne     _L155B
@@ -1174,15 +1173,15 @@ jmp_draw_points
 jmp_snd_reset
         jmp     snd_reset
 
-L16C9
-        jmp     L1820
+jmp_load_charset
+        jmp     load_charset
 
-L16CC
-        jmp     L186B
+jmp_setup_screen
+        jmp     setup_screen
 
 L16CF
         jsr     L1497
-        jsr     L16CC
+        jsr     jmp_setup_screen
         lda     #$d7
         sta     SCREENPTRLO
         lda     #$1e                ;looks to be the screen address of one character left of the lives counter area
@@ -1374,52 +1373,52 @@ _loop
         bpl     _loop
         rts
 
-L1820
+load_charset
         clc
-        lda     #$9f
+        lda     #$9f                ;TODO: give screenptr and screenptr2 local names that fit better when moving to manual editing
         adc     #$57
         sta     SCREENPTRLO
         lda     #$1b
-        adc     #$01
-        sta     SCREENPTRHI
+        adc     #$01                ;really weird way of setting screenptr to 0x1cf6
+        sta     SCREENPTRHI         ;thats the address of the last byte of the new characters
         lda     #$57
         sta     SCREENPTR2LO
-        lda     #$1d
-        sta     SCREENPTR2HI
+        lda     #$1d                ;set screenptr2 to 0x1d57
+        sta     SCREENPTR2HI        ;thats the new end of the characters
         ldy     #$00
-_L1837
+_loop
         lda     (SCREENPTRLO),y
-        sta     (SCREENPTR2LO),y
+        sta     (SCREENPTR2LO),y    ;copy byte to new location
         lda     SCREENPTRLO
-        bne     _L1841
+        bne     _no_carry_src       ;don't increment high byte of source pointer if no carry
         dec     SCREENPTRHI
-_L1841
+_no_carry_src
         dec     SCREENPTRLO
         lda     SCREENPTR2LO
-        bne     _L1849
+        bne     _no_carry_dest      ;don't increment high byte of dest pointer if no carry
         dec     SCREENPTR2HI
-_L1849
+_no_carry_dest
         dec     SCREENPTR2LO
         lda     SCREENPTR2HI
-        cmp     #$1b
-        bne     _L1837
+        cmp     #$1b                ;while ((screenptr2 & 0xff00) != 0x1b)
+        bne     _loop               ;i.e. last byte gets copied to 0x1c00 (start of characterset ram)
         lda     #$00
         ldy     #$1d
         sta     SCREENPTR2LO
         sta     SCREENPTRLO
-        sty     SCREENPTR2HI
+        sty     SCREENPTR2HI        ;set screenptr2 to 0x1d00
         lda     #$81
-        sta     SCREENPTRHI
+        sta     SCREENPTRHI         ;and screenptr to 0x8100
         ldy     #$ff
-_L1861
-        lda     (SCREENPTRLO),y
+_loop2
+        lda     (SCREENPTRLO),y     ;copy range 0x81ff-0x8158 to 0x1dff-0x1d58
         sta     (SCREENPTR2LO),y
         dey
         cpy     #$57
-        bne     _L1861
+        bne     _loop2
         rts
 
-L186B
+setup_screen
         lda     #$b4                ;set irq handler to 16b4
         ldy     #$16
         sta     CINV
@@ -1427,14 +1426,14 @@ L186B
         lda     #$08
         sta     $900f               ;set screen and border color: background: 1000 inverted: 0 border: 000
         ldy     #$00
-_L187C
-        lda     _L18FF,y
+_loop
+        lda     SCORE_HEADER_ARR,y
         cmp     #$00
-        beq     _L1889
+        beq     _break
         jsr     ichrout
         iny
-        bne     _L187C
-_L1889
+        bne     _loop
+_break
         sei
         lda     #$44
         ldy     #$1a                ;not in screenmem, maybe screenptr2 isnt actually pointing to screen mem
@@ -1476,13 +1475,13 @@ _L18A6
         lda     #$fb
         sta     SCREENPTRLO
         ldy     #$03
-_loop
+_loop1
         ldx     GHOST_COLORS_ARR,y
         lda     #CHARCODE_GHOST1
         sec
         jsr     jmp_draw_char2
         dey
-        bpl     _loop
+        bpl     _loop1
         lda     #$56                ;set irq handler to 1356
         ldy     #$13
         sta     CINV
@@ -1511,36 +1510,38 @@ _L18FA
         ldx     #$05
         jmp     L17DD
 
-_L18FF
-        .byte   $93
+        .logical $18ff
+SCORE_HEADER_ARR
+        .byte   $93                 ;clear screen
+        .byte   $9e                 ;set color to yellow
+        .byte   $28                 ;H
+        .byte   $29                 ;I
+        .byte   $2a                 ;G
+        .byte   $28                 ;H
+        .byte   $20
+        .byte   $23                 ;S
+        .byte   $24                 ;C
+        .byte   $25                 ;O
+        .byte   $26                 ;R
+        .byte   $27                 ;E
+        .byte   $20
+        .byte   $0d                 ;return
         .byte   $9e
-        .byte   $28
-        .byte   $29
-        .byte   $2a
-        .byte   $28
-        .byte   $20
-        .byte   $23
-        .byte   $24
-        .byte   $25
-        .byte   $26
-        .byte   $27
-        .byte   $20
-        .byte   $0d
-        .byte   $9e
         .byte   $20
         .byte   $20
         .byte   $20
         .byte   $20
         .byte   $20
-        .byte   $23
-        .byte   $24
-        .byte   $25
-        .byte   $26
-        .byte   $27
+        .byte   $23                 ;S
+        .byte   $24                 ;C
+        .byte   $25                 ;O
+        .byte   $26                 ;R
+        .byte   $27                 ;E
         .byte   $20
-        .byte   $0d
-        .byte   $13
+        .byte   $0d                 ;return
+        .byte   $13                 ;home
         .byte   $00
+        .here
 
 L191C
         lda     counter0
@@ -1834,7 +1835,14 @@ _L1A41
         .byte   $2e
         .byte   $ee
         .byte   $e0
-        .fill   8,$bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
         .byte   $61
         .byte   $11
         .byte   $15
@@ -1855,7 +1863,10 @@ _L1A41
         .byte   $19
         .byte   $a1
         .byte   $11
-        .text   "[++4"
+        .byte   $5b
+        .byte   $2b
+        .byte   $2b
+        .byte   $34
         .byte   $b2
         .byte   $b2
         .byte   $bb
@@ -1872,25 +1883,44 @@ _L1A41
         .byte   $b1
         .byte   $11
         .byte   $b2
-        .text   "+++++",$22
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $22
         .byte   $b2
         .byte   $b2
         .byte   $bb
         .byte   $bb
         .byte   $b2
-        .text   "+++++",$22
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $22
         .byte   $b2
         .byte   $b2
         .byte   $b1
         .byte   $11
         .byte   $b2
-        .text   "+++++",$22
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $22
         .byte   $b2
         .byte   $b2
         .byte   $bb
         .byte   $bb
         .byte   $b2
-        .text   "+++++"
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
+        .byte   $2b
         .byte   $65
         .byte   $b2
         .byte   $b2
@@ -1900,12 +1930,24 @@ _L1A41
         .byte   $2b
         .byte   $bb
         .byte   $cb
-        .fill   5,$bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
+        .byte   $bb
         .byte   $bc
         .byte   $bb
         .byte   $b2
         .byte   $61
-        .fill   9,$11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
+        .byte   $11
         .byte   $15
         .logical $1b21
 GHOST_COLORS_ARR
@@ -1983,7 +2025,7 @@ L1B7D
         cmp     #$09
 L1B7F
         bne     L1B7D
-        jmp     L16C9
+        jmp     jmp_load_charset
 
 init_vram
         ldx     #$07
