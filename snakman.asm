@@ -6,6 +6,7 @@ FREQ_OFF =      0                   ;setting oscillator freq to this value turns
 COLOR_WHITE =   1
 COLOR_RED =     2
 COLOR_CYAN =    3
+MAX_LIVES =     3
 COLOR_PURPLE =  4
 LOW_VOL =       $05
 COLOR_BLUE =    6
@@ -1196,14 +1197,14 @@ L16CF
         ldy     lives
         lda     #CHARCODE_EMPTY
         ldx     #COLOR_BLACK
-_L16E4
+_next_cell
         iny
-        cpy     #$04
-        beq     _L16EF
+        cpy     #MAX_LIVES+1        ;have we reached the final counter cell
+        beq     _return
         sec                         ;access_char_with_offset(mode=write)
-        jsr     jmp_access_char_with_offset
-        bcs     _L16E4
-_L16EF
+        jsr     jmp_access_char_with_offset ;clear each cell that is over the current number of lives
+        bcs     _next_cell
+_return
         rts
 
 L16F0
