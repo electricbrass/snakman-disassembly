@@ -8,6 +8,7 @@ COLOR_RED =     2
 COLOR_CYAN =    3
 MAX_LIVES =     3
 COLOR_PURPLE =  4
+COLOR_GREEN =   5
 LOW_VOL =       $05
 COLOR_BLUE =    6
 COLOR_YELLOW =  7
@@ -48,6 +49,8 @@ CHARCODE_MILKJUG = $16
 BONUS_SPOTHI =  $1e
 HUD_BONUS_SPOTHI = $1f
 HUD_GHOST_SPOTHI = $1f
+bonus_timerlo = $3f
+bonus_timerhi = $40
 TIME    =       $a2                 ;counts time by 1/60s
 BONUS_SPOTLO =  $a4
 NDX     =       $c6                 ;Number of Characters in Keyboard Buffer queue
@@ -122,8 +125,8 @@ _skip_wait
         sty     CINV+1
 _loop
         sei
-        bit     L1BBB
-        bpl     _L106A
+        bit     ghost_touch_flag    ;check if player-ghost collision happened
+        bpl     _no_death           ;branch if player didnt die
         jsr     jmp_snd_reset
         jsr     animate_death
         jsr     jmp_reset_positions
@@ -132,8 +135,8 @@ _loop
         jsr     L14A3
         jsr     L14A6
         lda     #$00
-        sta     L1BBB
-_L106A
+        sta     ghost_touch_flag    ;clear flag
+_no_death
         lda     L1BBA
         cmp     #$c5
         bcc     _L1074
@@ -337,7 +340,7 @@ _hit_ghost
 
 _hit_ghost_unpowered
         lda     #$ff
-        sta     L1BBB               ;set a flag to indicate its time to lose a life i guess? return without updating player pos
+        sta     ghost_touch_flag    ;set a flag to indicate its time to lose a life i guess? return without updating player pos
         pla
         pla
         rts
@@ -462,14 +465,14 @@ _L1265
         bpl     _L1265
         lda     TIMER1LO
         and     #$03                ;get random 0-3 value from timer1
-        clc                         ;picking random direction for ghost to move in
+        clc                         ;picking random amount to add to 1bb4 and use as offset into prng tablet
         adc     L1BB4
         sta     $8f
         dec     $8f
 _L1279
         inc     $8f
         ldy     $8f
-        lda     _L1329,y
+        lda     PRNG_TABLE,y
         sta     L1BB4
         lsr     a
         lsr     a
@@ -508,22 +511,22 @@ _L12B3
         ldy     L1BB4
         beq     _L12E5
 _L12C4
-        cmp     #$0b
+        cmp     #CHARCODE_SMALL_PELLET
         bcc     _L1279
-        cmp     #$0d
+        cmp     #CHARCODE_SNAK_RIGHT
         beq     _L12DE
         bcc     _L12E5
-        cmp     #$10
+        cmp     #CHARCODE_SNAK_DOWN
         beq     _L12DE
         bcc     _L1279
-        cmp     #$11
+        cmp     #CHARCODE_SNAK_CLOSED
         beq     _L12DE
-        cmp     #$18
+        cmp     #CHARCODE_SNAK_LEFT
         beq     _L12DE
         bcc     _L12E5
 _L12DE
         lda     #$ff
-        sta     L1BBB
+        sta     ghost_touch_flag    ;set a flag to indicate its time to lose a life
         bne     _L1328
 
 _L12E5
@@ -566,7 +569,8 @@ _L1321
 _L1328
         rts
 
-_L1329
+        .logical $1329
+PRNG_TABLE
         .byte   $00
         .byte   $00
         .byte   $10
@@ -607,6 +611,7 @@ _L1329
         .byte   $00
         .byte   $18
         .byte   $20
+        .here
         .logical $1351
 SCREEN_STRIDES2
         .byte   1                   ;right
@@ -617,9 +622,9 @@ SCREEN_STRIDES2
         .here
 
 irq_handler
-        inc     $3f
+        inc     bonus_timerlo
         bne     _L135C
-        inc     $40
+        inc     bonus_timerhi
 _L135C
         bit     L1BBE
         bpl     _L136F
@@ -664,17 +669,17 @@ _no_input
         jsr     L16C0
 _L13AA
         dec     L1BAD
-        bpl     _L13C6
+        bpl     _no_death
         lda     #$0c
         sta     L1BAD
         jsr     move_ghosts
-        bit     L1BBB
-        bpl     _L13C6
+        bit     ghost_touch_flag    ;check if ghost touched player
+        bpl     _no_death
         bit     L1BBE
         bpl     _L13E5
-        lda     #$00
-        sta     L1BBB
-_L13C6
+        lda     #$00                ;clear collision flag
+        sta     ghost_touch_flag
+_no_death
         dec     L1BAE
         bpl     _L13D3
         lda     #$04
@@ -690,12 +695,12 @@ _L13D3
         jsr     update_player
 _L13E5
         jsr     L191C
-        lda     $40
+        lda     bonus_timerhi
         cmp     #$05
         bcc     _space_occupied
         lda     #$00
-        sta     $3f
-        sta     $40
+        sta     bonus_timerlo       ;reset timer for bonus item
+        sta     bonus_timerhi
         lda     BONUS_SPOT
         cmp     #CHARCODE_EMPTY
         bne     _space_occupied     ;if empty, spawn a bonus item maybe?
@@ -1286,7 +1291,7 @@ _L1758
         lda     ($8d),y
         tax
         lda     #$0e
-        jsr     L17DD
+        jsr     draw_char2
         ldy     #$04
         lda     #$00
         sta     ($8d),y
@@ -1343,7 +1348,7 @@ _L17CD
         pla
         tax
         tya
-L17DD
+draw_char2
         sec                         ;access_char(mode=write)
         jmp     jmp_access_char
 
@@ -1361,7 +1366,7 @@ draw_points
         lda     #CHARCODE_EMPTY
         ldx     #COLOR_BLACK
 _L17F2
-        jsr     L17DD
+        jsr     draw_char2
         inc     SCREENPTRLO
         bne     _L17FF
 _L17F9
@@ -1374,7 +1379,7 @@ _L17FF
         and     #$0f
         ora     #CHARCODE_NUM0      ;add offset from charcode for '0'
         ldx     #COLOR_YELLOW
-        jsr     L17DD
+        jsr     draw_char2
         inc     SCREENPTRLO
         lda     #CHARCODE_NUM0      ;draw 2 trailing 0s
         jsr     jmp_access_char     ;access_char(mode=???)
@@ -1474,11 +1479,11 @@ _L18A6
         lsr     a
         lsr     a
         lsr     a
-        lsr     a
-        jsr     _L18E1
+        lsr     a                   ;extract upper nibble, left tile
+        jsr     draw_next_tile
         pla
-        and     #$0f
-        jsr     _L18E1
+        and     #$0f                ;extract lower nibble, right tile
+        jsr     draw_next_tile
         pla
         tax
         inx
@@ -1505,27 +1510,27 @@ _loop1
         sty     CINV+1
         rts
 
-_L18E1
+draw_next_tile
         inc     SCREENPTRLO
-        bne     _L18E7
+        bne     _no_carry
         inc     SCREENPTRHI
-_L18E7
-        cmp     #$0b
-        bcc     _L18F4
-        beq     _L18FA
-        cmp     #$0c
-        beq     _L18F7
-        ldx     #$07
+_no_carry
+        cmp     #CHARCODE_SMALL_PELLET
+        bcc     _blue
+        beq     _green
+        cmp     #CHARCODE_POWER_PELLET
+        beq     _red
+        ldx     #COLOR_YELLOW
         .byte   $2c
-_L18F4
-        ldx     #$06
+_blue
+        ldx     #COLOR_BLUE
         .byte   $2c
-_L18F7
-        ldx     #$02
+_red
+        ldx     #COLOR_RED
         .byte   $2c
-_L18FA
-        ldx     #$05
-        jmp     L17DD
+_green
+        ldx     #COLOR_GREEN
+        jmp     draw_char2
 
         .logical $18ff
 SCORE_HEADER_ARR
@@ -1746,226 +1751,29 @@ draw_char
         sec                         ;access_char(mode=write)
         jmp     jmp_access_char
 
-        .byte   $31
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $14
-        .byte   $2b
-        .byte   $bb
-        .byte   $cb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bc
-        .byte   $bb
-        .byte   $b2
-        .byte   $2b
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $b1
-        .byte   $77
-        .byte   $1b
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $b2
-        .byte   $2b
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $22
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $b2
-        .byte   $2b
-        .byte   $11
-        .byte   $1b
-        .byte   $2b
-        .byte   $2b
-        .byte   $65
-        .byte   $b2
-        .byte   $b2
-        .byte   $b1
-        .byte   $11
-        .byte   $b2
-        .byte   $2b
-        .byte   $bb
-        .byte   $bb
-        .byte   $2b
-        .byte   $2b
-        .byte   $bb
-        .byte   $b2
-        .byte   $b2
-        .byte   $bb
-        .byte   $bb
-        .byte   $b2
-        .byte   $2b
-        .byte   $11
-        .byte   $1b
-        .byte   $2b
-        .byte   $61
-        .byte   $11
-        .byte   $15
-        .byte   $b2
-        .byte   $b3
-        .byte   $11
-        .byte   $19
-        .byte   $2b
-        .byte   $bb
-        .byte   $bb
-        .byte   $2b
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $b2
-        .byte   $b2
-        .byte   $dd
-        .byte   $d2
-        .byte   $a1
-        .byte   $11
-        .byte   $4b
-        .byte   $2b
-        .byte   $31
-        .byte   $11
-        .byte   $14
-        .byte   $b2
-        .byte   $b6
-        .byte   $11
-        .byte   $15
-        .byte   $61
-        .byte   $11
-        .byte   $5b
-        .byte   $2b
-        .byte   $2e
-        .byte   $ee
-        .byte   $e0
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $61
-        .byte   $11
-        .byte   $15
-        .byte   $b2
-        .byte   $b3
-        .byte   $11
-        .byte   $14
-        .byte   $31
-        .byte   $11
-        .byte   $4b
-        .byte   $2b
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $b2
-        .byte   $b6
-        .byte   $11
-        .byte   $19
-        .byte   $a1
-        .byte   $11
-        .byte   $5b
-        .byte   $2b
-        .byte   $2b
-        .byte   $34
-        .byte   $b2
-        .byte   $b2
-        .byte   $bb
-        .byte   $bb
-        .byte   $b2
-        .byte   $2b
-        .byte   $bb
-        .byte   $bb
-        .byte   $2b
-        .byte   $2b
-        .byte   $22
-        .byte   $b2
-        .byte   $b2
-        .byte   $b1
-        .byte   $11
-        .byte   $b2
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $22
-        .byte   $b2
-        .byte   $b2
-        .byte   $bb
-        .byte   $bb
-        .byte   $b2
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $22
-        .byte   $b2
-        .byte   $b2
-        .byte   $b1
-        .byte   $11
-        .byte   $b2
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $22
-        .byte   $b2
-        .byte   $b2
-        .byte   $bb
-        .byte   $bb
-        .byte   $b2
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $2b
-        .byte   $65
-        .byte   $b2
-        .byte   $b2
-        .byte   $b1
-        .byte   $11
-        .byte   $b2
-        .byte   $2b
-        .byte   $bb
-        .byte   $cb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bb
-        .byte   $bc
-        .byte   $bb
-        .byte   $b2
-        .byte   $61
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $11
-        .byte   $15
+        .logical $1a45
+MAZE_LAYOUT
+        .byte   $31,$11,$11,$11,$11,$11,$11,$11,$11,$11,$14 ;maze layout, 2 characters per byte, each line here is a row
+        .byte   $2b,$bb,$cb,$bb,$bb,$bb,$bb,$bb,$bc,$bb,$b2
+        .byte   $2b,$11,$11,$11,$b1,$77,$1b,$11,$11,$11,$b2
+        .byte   $2b,$bb,$bb,$bb,$bb,$22,$bb,$bb,$bb,$bb,$b2
+        .byte   $2b,$11,$1b,$2b,$2b,$65,$b2,$b2,$b1,$11,$b2
+        .byte   $2b,$bb,$bb,$2b,$2b,$bb,$b2,$b2,$bb,$bb,$b2
+        .byte   $2b,$11,$1b,$2b,$61,$11,$15,$b2,$b3,$11,$19
+        .byte   $2b,$bb,$bb,$2b,$bb,$bb,$bb,$b2,$b2,$dd,$d2
+        .byte   $a1,$11,$4b,$2b,$31,$11,$14,$b2,$b6,$11,$15
+        .byte   $61,$11,$5b,$2b,$2e,$ee,$e0,$bb,$bb,$bb,$bb
+        .byte   $bb,$bb,$bb,$bb,$61,$11,$15,$b2,$b3,$11,$14
+        .byte   $31,$11,$4b,$2b,$bb,$bb,$bb,$b2,$b6,$11,$19
+        .byte   $a1,$11,$5b,$2b,$2b,$34,$b2,$b2,$bb,$bb,$b2
+        .byte   $2b,$bb,$bb,$2b,$2b,$22,$b2,$b2,$b1,$11,$b2
+        .byte   $2b,$2b,$2b,$2b,$2b,$22,$b2,$b2,$bb,$bb,$b2
+        .byte   $2b,$2b,$2b,$2b,$2b,$22,$b2,$b2,$b1,$11,$b2
+        .byte   $2b,$2b,$2b,$2b,$2b,$22,$b2,$b2,$bb,$bb,$b2
+        .byte   $2b,$2b,$2b,$2b,$2b,$65,$b2,$b2,$b1,$11,$b2
+        .byte   $2b,$bb,$cb,$bb,$bb,$bb,$bb,$bb,$bc,$bb,$b2
+        .byte   $61,$11,$11,$11,$11,$11,$11,$11,$11,$11,$15
+        .here
         .logical $1b21
 GHOST_COLORS_ARR
         .byte   COLOR_RED
@@ -2021,11 +1829,25 @@ GHOST_COLORS_ARR
         .byte   $20
         .byte   $0c
         .byte   $18
-        .fill   8,$00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
         .byte   $01
         .byte   $00
         .byte   $c4
-        .fill   8,$00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
+        .byte   $00
 
 init
         ldy     #$00
@@ -2045,7 +1867,7 @@ L1B7F
         jmp     jmp_load_charset
 
 init_vram
-        ldx     #$07
+        ldx     #$07                ;i think this is actually something about drawing the score
 loop1
         cmp     L1B97,x
         beq     inc_counter0
@@ -2130,7 +1952,7 @@ input_direction
         .byte   %00111111
 L1BBA
         .byte   %00111111
-L1BBB
+ghost_touch_flag
         .byte   %00111111
 L1BBC
         .byte   %00111111
