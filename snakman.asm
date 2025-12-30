@@ -12,10 +12,13 @@ LOW_VOL =       $05
 COLOR_BLUE =    6
 COLOR_YELLOW =  7
 HALF_VOL =      $08
+CHARCODE_SMALL_PELLET = $0b
+CHARCODE_POWER_PELLET = $0c
 CHARCODE_SNAK_RIGHT = $0d
 CHARCODE_GHOST1 = $0e
 MAX_VOL =       $0f
 CHARCODE_SNAK_DOWN = $10
+POINTS_SMALL_PELLET = $10           ;10 in BCD
 CHARCODE_SNAK_CLOSED = $11
 CHARCODE_TREE = $12
 CHARCODE_FLAG = $13
@@ -33,6 +36,7 @@ CHARCODE_NUM0 = $30
 KEYCODE_E =     $45
 KEYCODE_J =     $4a
 KEYCODE_L =     $4c
+POINTS_POWER_PELLET = $50           ;50 in BCD
 KEYCODE_V =     $56
 INTERLACE_BIT = $80
 JOYBIT_RIGHT =  $80
@@ -58,6 +62,9 @@ UNKNOWNPTRHI =  $fc
 KEYD    =       $0277               ;Keyboard Buffer Queue (FIFO)
 CINV    =       $0314               ;Vector: Hardware IRQ Interrupt ($ea31)
 lives   =       $1b88
+SCORE_ADD =     $1b89               ;value to be added when updating the score
+SCORE_ADD_DIGITS23 = $1b8b
+SCORE_ADD_DIGITS01 = $1b8c
 BONUS_SPOT =    $1ea4               ;location on screen when bonus items spawn
 OSC1_FREQ =     $900a               ;oscillator 1 frequency register (on:128-255)
 OSC3_FREQ =     $900c               ;oscillator 3 frequency register (on:128-255)
@@ -99,15 +106,15 @@ main
         ora     #INTERLACE_BIT
         sta     $9000
 _no_interlace
-        sec
+        sec                         ;set flag to wait for input before starting
         php
-L1032
+setup_game
         jsr     jmp_setup_screen
         jsr     L148E
-        plp
-        bcc     _L103E
+        plp                         ;read flag, if clear, skip waiting for input, if set, wait
+        bcc     _skip_wait
         jsr     wait_for_start      ;wait for F1 or fire to start game
-_L103E
+_skip_wait
         jsr     L14A6
         lda     #$56
         ldy     #$13
@@ -162,9 +169,9 @@ _L1098
         bpl     _L1098
 _L10A1
         jsr     L1494
-        clc
-        php
-        jmp     L1032
+        clc                         ;clear flag and push to stack
+        php                         ;this will skip the wait_for_start call in main
+        jmp     setup_game
 
 wait_for_start
         jsr     jmp_snd_reset       ;reset all sounds
@@ -196,7 +203,7 @@ _shift
 _no_input
         rts
 
-L10D8
+update_player
         lda     PLAYER_POSLO
         sta     SCREENPTRLO
         pha
@@ -205,8 +212,8 @@ L10D8
         pha
         ldy     input_direction
         jsr     handle_input
-        cmp     #$0b
-        bcs     _L1105
+        cmp     #CHARCODE_SMALL_PELLET
+        bcs     _non_wall_tile
         pla
         sta     SCREENPTRHI
         pla
@@ -214,28 +221,28 @@ L10D8
         pha
         lda     SCREENPTRHI
         pha
-        ldy     L1BAB
+        ldy     player_direction
         jsr     handle_input
-        cmp     #$0b
-        bcs     _L1105
-        pla
+        cmp     #CHARCODE_SMALL_PELLET
+        bcs     _non_wall_tile
+        pla                         ;it was a wall so just pop stuff from stack and do nothing
         pla
         rts
 
-_L1105
-        beq     _L113A
-        cmp     #$0c
-        beq     _L1150
-        cmp     #$10
-        bcs     _L1112
-        jmp     _L11AC
+_non_wall_tile
+        beq     _eat_small_pellet
+        cmp     #CHARCODE_POWER_PELLET
+        beq     _eat_power_pellet
+        cmp     #CHARCODE_TREE-2
+        bcs     _non_ghost
+        jmp     _hit_ghost
 
-_L1112
-        cmp     #$18
-        bcc     _L1177
-_L1116
-        lda     L120B,y
-        sty     L1BAB
+_non_ghost
+        cmp     #CHARCODE_MUSICNOTE+1
+        bcc     _eat_bonus          ;branch if charcode is >= snak down and <= musicnote, it will never equal snak down or snak closed though because only 1 snakman
+_draw_new_player_pos
+        lda     PLAYER_SPRITE_ARR,y
+        sty     player_direction
         ldx     #COLOR_YELLOW
         sec                         ;access_char(mode=write)
         jsr     jmp_access_char
@@ -252,21 +259,21 @@ _L1116
         sec                         ;access_char(mode=write)
         jmp     jmp_access_char
 
-_L113A
-        lda     #$10
+_eat_small_pellet
+        lda     #POINTS_SMALL_PELLET
         ldx     #$00
-        jsr     _L11D1
+        jsr     _update_score
         lda     #$ff
         sta     L1BBF
         lda     #$06
         sta     counter1
         dec     L1BBA
-        jmp     _L1116
+        jmp     _draw_new_player_pos
 
-_L1150
-        lda     #$50
+_eat_power_pellet
+        lda     #POINTS_POWER_PELLET
         ldx     #$00
-        jsr     _L11D1
+        jsr     _update_score
         lda     #$01
         sta     L1BBD
         lda     #$c0
@@ -278,16 +285,16 @@ _L1150
         sta     L1BA5
         sta     L1B97
         sta     L1B9E
-        jmp     _L1116
+        jmp     _draw_new_player_pos
 
-_L1177
+_eat_bonus
         sec
-        sbc     #$12
+        sbc     #$12                ;convert character code to index into points array
         tax
         lda     BONUS_POINTS_ARR2,x
         tax
         lda     #$00
-        jsr     _L11D1
+        jsr     _update_score
         tya
         pha
         lda     SCREENPTRLO
@@ -299,24 +306,24 @@ _L1177
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         ldy     #$05
-_L1196
+_loop
         lda     #CHARCODE_EMPTY
         ldx     #COLOR_BLACK
         sec                         ;access_char_with_offset(mode=write)
         jsr     jmp_access_char_with_offset
         dey
-        bpl     _L1196
+        bpl     _loop
         pla
         sta     SCREENPTRHI
         pla
         sta     SCREENPTRLO
         pla
         tay
-        jmp     _L1116
+        jmp     _draw_new_player_pos
 
-_L11AC
+_hit_ghost
         bit     L1BBE
-        bpl     _L11C9
+        bpl     _hit_ghost_unpowered
         lda     #$ff
         sta     L1BC1
         inc     ghost_eat_streak
@@ -325,34 +332,34 @@ _L11AC
         lda     GHOST_POINTS_ARR2,x
         tax                         ;load points for just eaten ghost into X
         lda     #$00
-        jsr     _L11D1
-        jmp     _L1116
+        jsr     _update_score
+        jmp     _draw_new_player_pos
 
-_L11C9
+_hit_ghost_unpowered
         lda     #$ff
-        sta     L1BBB
+        sta     L1BBB               ;set a flag to indicate its time to lose a life i guess? return without updating player pos
         pla
         pla
         rts
 
-_L11D1
-        sta     L1B8C
-        stx     L1B8B
-        tya
+_update_score
+        sta     SCORE_ADD_DIGITS01  ;store A and X args for later use
+        stx     SCORE_ADD_DIGITS23  ;A is right 2 digits, X is left 2 digits
+        tya                         ;save Y and screenptr
         pha
         lda     SCREENPTRLO
         pha
         lda     SCREENPTRHI
         pha
         jsr     L148E
-        lda     #$00
+        lda     #$00                ;clear score increment
         ldy     #$03
-_L11E6
-        sta     L1B89,y
+_loop1
+        sta     SCORE_ADD,y
         dey
-        bpl     _L11E6
+        bpl     _loop1
         pla
-        sta     SCREENPTRHI
+        sta     SCREENPTRHI         ;restore screenptr and Y
         pla
         sta     SCREENPTRLO
         pla
@@ -360,9 +367,9 @@ _L11E6
         rts
 
 BONUS_POINTS_ARR2
-        .byte   $20                 ;cherry (or tree?) points, 2000 | seems like slightly different duplicate of BONUS_POINTS_ARR
+        .byte   $20                 ;tree points, 2000 | seems like slightly different duplicate of BONUS_POINTS_ARR
         .byte   $05                 ;flag points, 500
-        .byte   $20                 ;tree (or cherry?) points, 2000
+        .byte   $20                 ;cherry points, 2000
         .byte   $10                 ;star points, 1000
         .byte   $02                 ;milk jug points, 200
         .byte   $01                 ;music note points, 100
@@ -388,11 +395,13 @@ SCREEN_STRIDES
         .byte   22
         .byte   $81                 ;left, -1 with sign-magnitude
         .here
-L120B
-        .byte   $0d
-        .byte   $19
-        .byte   $10
-        .byte   $18
+        .logical $120b
+PLAYER_SPRITE_ARR
+        .byte   CHARCODE_SNAK_RIGHT
+        .byte   CHARCODE_SNAK_UP
+        .byte   CHARCODE_SNAK_DOWN
+        .byte   CHARCODE_SNAK_LEFT
+        .here
 
 handle_input
         tya
@@ -421,7 +430,7 @@ _join
         tax                         ;temporarily transfer accumulator to X so that stack operations can be done
         pla                         ;pop direction from stack and move it to Y
         tay
-        txa
+        txa                         ;transfer tile at new location to A
         rts
 
 move_ghosts
@@ -678,7 +687,7 @@ _L13D3
         sta     L1BAF
         lda     #$00
         sta     L1BBF
-        jsr     L10D8
+        jsr     update_player
 _L13E5
         jsr     L191C
         lda     $40
@@ -835,7 +844,7 @@ L14A6
 jmp_reset_positions
         jmp     reset_positions
 
-        jmp     L15CF
+        jmp     draw_yellow_char2
 
 access_char
         ldy     #$00
@@ -849,7 +858,7 @@ access_char_with_offset
         tax
         pla
         sta     SCREENPTRHI
-        lda     (SCREENPTRLO),y
+        lda     (SCREENPTRLO),y     ;return character
         clc
         rts
 
@@ -864,22 +873,22 @@ _write_mode
         txa
         sta     (SCREENPTRLO),y
         pla
-        sta     SCREENPTRHI
+        sta     SCREENPTRHI         ;write new character
         sec
         pla
         rts
 
 L14D8
-        sei
-        sed
+        sei                         ;disable interrupts
+        sed                         ;enable decimal mode
         ldy     #$03
         clc
-_L14DD
-        lda     L1B89,y
+_loop1
+        lda     SCORE_ADD,y
         adc     init_vram,y
         sta     init_vram,y
         dey
-        bpl     _L14DD
+        bpl     _loop1
         cld
         lda     #$0b
         sta     SCREENPTRLO
@@ -902,10 +911,10 @@ _L150D
         lda     #$00
         sta     $fd
         sta     $fe
-_L1513
+_loop2
         ldy     $fe
         cpy     #$04
-        beq     _L152D
+        beq     _return
         lda     (UNKNOWNPTRLO),y
         pha
         lsr     a
@@ -917,8 +926,8 @@ _L1513
         and     #$0f
         jsr     _L152E
         inc     $fe
-        bne     _L1513
-_L152D
+        bne     _loop2
+_return
         rts
 
 _L152E
@@ -1006,28 +1015,28 @@ L15A2
         sty     SCREENPTRHI
         clc                         ;access_char(mode=read)
         jsr     jmp_access_char
-        cmp     #$11
-        bne     _L15C4
-        lda     L1BAB
-        beq     _L15C7
+        cmp     #CHARCODE_SNAK_CLOSED
+        bne     _closed
+        lda     player_direction
+        beq     _right
         cmp     #$01
-        beq     _L15CA
+        beq     _up
         cmp     #$02
-        beq     _L15CD
+        beq     _down
         lda     #CHARCODE_SNAK_LEFT
         .byte   $2c
-_L15C4
+_closed
         lda     #CHARCODE_SNAK_CLOSED
         .byte   $2c
-_L15C7
+_right
         lda     #CHARCODE_SNAK_RIGHT
         .byte   $2c
-_L15CA
+_up
         lda     #CHARCODE_SNAK_UP
         .byte   $2c
-_L15CD
+_down
         lda     #CHARCODE_SNAK_DOWN
-L15CF
+draw_yellow_char2
         ldx     #COLOR_YELLOW
 L15D1
         sec                         ;access_char(mode=write)
@@ -1046,20 +1055,20 @@ L15DB
         lda     #$00
         sta     TIME
         lda     #$1a
-        jsr     L15CF
+        jsr     draw_yellow_char2
         cli
 _L15F3
         lda     TIME
         cmp     #$05
         bcc     _L15F3
         lda     #$1b
-        jsr     L15CF
+        jsr     draw_yellow_char2
 _L15FE
         lda     TIME
         cmp     #$09
         bcc     _L15FE
         lda     #$1c
-        jsr     L15CF
+        jsr     draw_yellow_char2
 _L1609
         lda     TIME
         cmp     #$0d
@@ -1088,10 +1097,10 @@ L162D
         sta     PLAYER_POSLO
         sty     PLAYER_POSHI
         lda     #$01
-        sta     L1BAB
+        sta     player_direction
         sta     input_direction     ;start game facing up
         lda     #$10
-        bne     L15CF
+        bne     draw_yellow_char2
 
 reset_positions
         lda     #$03                ;not 100% sure that's all this does
@@ -2039,9 +2048,7 @@ init_vram
         ldx     #$07
 loop1
         cmp     L1B97,x
-L1B89
         beq     inc_counter0
-L1B8B
         dex
 L1B8C
         bpl     loop1
@@ -2090,7 +2097,7 @@ PLAYER_POSLO
         .byte   %11111111
 PLAYER_POSHI
         .byte   %11111111
-L1BAB
+player_direction
         .byte   %11111111
 L1BAC
         .byte   %11111111
