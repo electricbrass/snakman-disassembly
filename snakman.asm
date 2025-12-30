@@ -1457,25 +1457,25 @@ _loop
         bne     _loop
 _break
         sei
-        lda     #$44
+        lda     #$44                ;$1a45 is the location of the maze layout
         ldy     #$1a                ;not in screenmem, maybe screenptr2 isnt actually pointing to screen mem
         sta     SCREENPTR2LO
         sty     SCREENPTR2HI
-        lda     #$2b
-        ldy     #$1e                ;not sure what this is, its just above the top right corner of maze, maybe last spot the score extends into
+        lda     #$2b                ;maze in screen mem starts at $1e2c
+        ldy     #$1e                ;both of these pointers get incremented once before doing anything with them
         sta     SCREENPTRLO
         sty     SCREENPTRHI
         ldx     #$00
         txa
         pha
         ldy     #$00
-_L18A0
+_loop_tiledraw
         inc     SCREENPTR2LO
-        bne     _L18A6
+        bne     _no_carry
         inc     SCREENPTR2HI
-_L18A6
-        lda     (SCREENPTR2LO),y
-        pha
+_no_carry
+        lda     (SCREENPTR2LO),y    ;load byte of 2 packed characters from maze layout
+        pha                         ;save loop counter
         lsr     a
         lsr     a
         lsr     a
@@ -1484,13 +1484,13 @@ _L18A6
         pla
         and     #$0f                ;extract lower nibble, right tile
         jsr     draw_next_tile
-        pla
+        pla                         ;load loop counter
         tax
         inx
         txa
         pha
-        cpx     #$dc
-        bne     _L18A0
+        cpx     #220                ;check if 220 tiles have been drawn
+        bne     _loop_tiledraw
         pla
         lda     #$1e                ;screen address of leftmost cell of ghost home
         sta     SCREENPTRHI
